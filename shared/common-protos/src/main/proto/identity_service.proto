@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.identity;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.identity";
+option java_outer_classname = "IdentityServiceProto";
+
+// ===================================================================
+//  Primary gRPC Service for Identity Lifecycle Management
+// ===================================================================
+service IdentityService {
+  // --- Type-Specific Create Operations ---
+  rpc CreateEmployee(CreateEmployeeRequest) returns (IdentityMessage);
+  rpc CreateNonHumanIdentity(CreateNonHumanIdentityRequest) returns (IdentityMessage);
+  
+  // --- Generic Read, Delete, and Utility Operations ---
+  rpc GetIdentityById(GetIdentityByIdRequest) returns (IdentityMessage);
+  rpc DeleteIdentity(DeleteIdentityRequest) returns (DeleteIdentityResponse);
+  rpc IdentityExists(IdentityExistsRequest) returns (IdentityExistsResponse);
+
+  // --- Other service methods for data integration and correlation ---
+  rpc FindIdentityByAttribute(FindIdentityByAttributeRequest) returns (FindIdentityByAttributeResponse);
+  rpc PushAuthoritativeData(PushAuthoritativeDataRequest) returns (google.protobuf.Empty);
+  rpc CreateIdentityFromAuthoritativeSource(CreateIdentityFromAuthoritativeSourceRequest) returns (IdentityMessage);
+  rpc PushDataShard(PushDataShardRequest) returns (google.protobuf.Empty);
+}
+
+// ===================================================================
+//  Core Message Definitions
+// ===================================================================
+
+// A unified message representing any type of Identity.
+message IdentityMessage {
+  string id = 1;
+  string tenant_id = 2;
+  string identity_type = 3; // E.g., "EMPLOYEE", "NON_HUMAN"
+  string status = 4;
+  google.protobuf.StringValue dgraph_node_id = 5;
+  int64 created_at = 6;
+  
+  oneof core_attributes {
+    EmployeeAttributes employee_attributes = 10;
+    NonHumanAttributes non_human_attributes = 11;
+  }
+
+  google.protobuf.Struct extended_attributes = 20;
+}
+
+// Message containing the core attributes for an Employee.
+message EmployeeAttributes {
+  string username = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string display_name = 5;
+  string employee_id = 6;
+  string job_title = 7;
+  string department = 8;
+  google.protobuf.StringValue manager_id = 9;
+}
+
+// Message containing the core attributes for a Non-Human Identity.
+message NonHumanAttributes {
+  string service_name = 1;
+  string owner_team = 2;
+  string description = 3;
+}
+
+// ===================================================================
+//  RPC-Specific Request/Response Messages
+// ===================================================================
+
+message CreateEmployeeRequest {
+  string tenant_id = 1;
+  EmployeeAttributes core_attributes = 2;
+  google.protobuf.Struct extended_attributes = 3;
+}
+
+message CreateNonHumanIdentityRequest {
+  string tenant_id = 1;
+  NonHumanAttributes core_attributes = 2;
+  google.protobuf.Struct extended_attributes = 3;
+}
+
+message GetIdentityByIdRequest {
+  string id = 1;
+  string tenant_id = 2; // Ensures the caller can only access identities within their tenant.
+}
+
+message DeleteIdentityRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message DeleteIdentityResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message IdentityExistsRequest {
+  string identity_id = 1;
+  string tenant_id = 2;
+}
+
+message IdentityExistsResponse {
+  bool exists = 1;
+}
+
+message FindIdentityByAttributeRequest {
+  string tenant_id = 1;
+  string attribute_name = 2;
+  string attribute_value = 3;
+}
+
+message FindIdentityByAttributeResponse {
+  repeated IdentityMessage identities = 1;
+}
+
+message PushAuthoritativeDataRequest {
+  string resource_id = 1;
+  string source_name = 2;
+  string tenant_id = 3;
+  map<string, google.protobuf.Value> attributes = 4;
+}
+
+message CreateIdentityFromAuthoritativeSourceRequest {
+  string resource_id = 1;
+  string tenant_id = 2;
+  string source_name = 3;
+  map<string, google.protobuf.Value> attributes = 4;
+}
+
+message PushDataShardRequest {
+  string identity_id = 1;
+  string resource_id = 2;
+  string tenant_id = 3;
+  string source_name = 4;
+  map<string, google.protobuf.Value> attributes = 5;
+}

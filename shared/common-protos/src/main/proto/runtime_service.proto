@@ -1,0 +1,201 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.runtime;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.runtime";
+option java_outer_classname = "RuntimeServiceProto";
+
+service ConnectorRuntimeService {
+  // --- Discovery & Schema ---
+  rpc DiscoverConnectors(google.protobuf.Empty)
+      returns (DiscoverConnectorsResponse);
+  rpc GetConnectorProperties(GetConnectorPropertiesRequest)
+      returns (ConnectorProperties);
+  rpc GetConnectorIcon(GetConnectorIconRequest)
+      returns (GetConnectorIconResponse);
+  rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse);
+  rpc FetchSchema(FetchSchemaRequest) returns (FetchSchemaResponse);
+  rpc DiscoverObjectClasses(DiscoverObjectClassesRequest)
+      returns (DiscoverObjectClassesResponse);
+
+    // --- Provisioning & Search Operations ---
+  rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse);
+  rpc UpdateObject(UpdateObjectRequest) returns (UpdateObjectResponse);
+  rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse);
+  rpc SearchObjects(SearchObjectsRequest) returns (stream ConnectorObject);
+  rpc PreviewObjects(SearchObjectsRequest) returns (stream ConnectorObject);
+  rpc SearchObjectsPaged(SearchObjectsRequest) returns (SearchObjectsResponse);
+}
+
+// === Messages ===
+
+message DiscoveredConnector {
+  string id = 1;
+  string label = 2;
+  string bundle_version = 3;
+  string icon_url = 4;
+}
+
+message DiscoverConnectorsResponse {
+  repeated DiscoveredConnector connectors = 1;
+}
+
+message GetConnectorPropertiesRequest { string id = 1; }
+
+message ConnectorProperties {
+  string display_name = 1;
+  repeated ConnectorProperty properties = 3;
+}
+
+message GetConnectorIconRequest { string id = 1; }
+
+message GetConnectorIconResponse {
+  bytes icon_data = 1;
+  string content_type = 2;
+}
+
+message ConnectorProperty {
+  string name = 1;
+  string display_name = 2;
+  string help_message = 3;
+  string type = 4;
+  bool required = 5;
+  bool confidential = 6;
+}
+
+message TestConnectionRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+}
+
+message TestConnectionResponse {
+  bool success = 1;
+  string message = 2;
+}
+message FetchSchemaRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+  string object_class_name = 3;
+}
+
+message FetchSchemaResponse {
+  bool success = 1;
+  string message = 2;
+  google.protobuf.Struct schema = 3;
+}
+
+message DiscoverObjectClassesRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+}
+
+message DiscoverObjectClassesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated string object_class_names = 3;
+}
+
+// --- Object Representation ---
+message ConnectorObject {
+  string uid = 1;
+  google.protobuf.Struct attributes = 2;
+}
+
+// --- Create ---
+message CreateObjectRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+  string object_class_name = 3;
+  google.protobuf.Struct attributes = 4;
+}
+message CreateObjectResponse { string uid = 1; }
+
+// --- Update ---
+message UpdateObjectRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+  string object_class_name = 3;
+  string uid = 4;
+  google.protobuf.Struct attributes_to_update = 5;
+}
+message UpdateObjectResponse { string uid = 1; }
+
+// --- Delete ---
+message DeleteObjectRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+  string object_class_name = 3;
+  string uid = 4;
+}
+message DeleteObjectResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- Search ---
+message SearchObjectsRequest {
+  string id = 1;
+  google.protobuf.Struct configuration = 2;
+  string object_class_name = 3;
+  Filter filter = 4;
+  int32 page_size = 5;
+  int32 page_offset = 6;  // Added for offset-based pagination
+  string sort_by = 7;     // Added for sorting
+  bool sort_descending = 8; // Added for sort direction
+  bool include_total_count = 9; // Added to get total result count
+  repeated string search_fields = 10; // Added for multi-field search
+}
+
+message SearchObjectsResponse {
+  repeated ConnectorObject objects = 1;
+  int64 total_count = 2;   // Total number of matching records
+  bool has_more = 3;       // Whether there are more results available
+  string next_page_token = 4; // Token for next page (for cursor-based pagination)
+}
+
+// --- Advanced Filter Message Definitions ---
+message CompositeFilter {
+  enum LogicalOperator {
+    AND = 0;
+    OR = 1;
+  }
+  LogicalOperator operator = 1;
+  repeated Filter filters = 2;
+}
+
+message SimpleFilter {
+  enum FilterOperator {
+    EQUALS = 0;
+    CONTAINS = 1;
+    STARTS_WITH = 2;
+    ENDS_WITH = 3;
+    GREATER_THAN = 4;
+    LESS_THAN = 5;
+    IS_PRESENT = 6;
+    BETWEEN = 7;        // Added for range queries
+    IN = 8;            // Added for multiple values
+    LIKE = 9;          // Added for wildcard matching
+    REGEX = 10;        // Added for regex matching
+    GREATER_THAN_OR_EQUAL = 11;  // Added for inclusive greater than
+    LESS_THAN_OR_EQUAL = 12;     // Added for inclusive less than
+  }
+  FilterOperator operator = 1;
+  string attribute_name = 2;
+  google.protobuf.Value attribute_value = 3;
+  google.protobuf.Value attribute_value_end = 4;  // Added for BETWEEN operator
+  repeated google.protobuf.Value attribute_values = 5; // Added for IN operator
+}
+
+message NotFilter { Filter filter = 1; }
+
+message Filter {
+  oneof filter_type {
+    CompositeFilter composite_filter = 1;
+    SimpleFilter simple_filter = 2;
+    NotFilter not_filter = 3;
+  }
+}

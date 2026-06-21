@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package com.aidentx.iam.contracts.grpc;
+
+import "google/protobuf/struct.proto"; 
+
+option java_package = "com.aidentx.iam.contracts.grpc";
+option java_multiple_files = true;
+
+// The main service for managing governance policies
+// The message mirrors the IdenitityMappingPolicyDto
+
+service GovernancePolicyService {
+  // An "upsert" operation: creates or replaces the entire policy for a given schema.
+  rpc UpsertPolicy(UpsertPolicyRequest) returns (UpsertPolicyResponse);
+
+  rpc GetPolicy(GetPolicyRequest) returns (IdentityMappingPolicy);
+  
+  // Delete all policies associated with a resource (application)
+  rpc DeletePoliciesByResource(DeletePoliciesByResourceRequest) returns (DeletePoliciesByResourceResponse);
+}
+
+
+message UpsertPolicyRequest {
+  string tenant_id = 1;
+  string identity_type = 2;
+  string resource_id = 3; // Application/Resource UUID
+  IdentityMappingPolicy policy = 4;
+  string schema_id = 5; // Schema UUID (optional)
+}
+
+message UpsertPolicyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetPolicyRequest {
+  string tenant_id = 1;
+  string identity_type = 2; // We are using the identityType string as the key
+  string resource_id = 3; // Application/Resource UUID
+}
+
+message DeletePoliciesByResourceRequest {
+  string tenant_id = 1;
+  string resource_id = 2; // Application/Resource UUID - deletes all policies for this resource
+}
+
+message DeletePoliciesByResourceResponse {
+  bool success = 1;
+  string message = 2;
+  int32 deleted_count = 3; // Number of policies deleted
+}
+
+message IdentityMappingPolicy {
+  repeated CorrelationRule correlation_rules = 1;
+  repeated AttributeMapping attribute_mappings = 2;
+  repeated AttributeSourcePriority source_priorities = 3;
+  repeated SynchronizationReaction synchronization_reactions = 4;
+}
+
+message AttributeSourcePriority {
+  string target_attribute = 1; // System key of the identity attribute
+  repeated ResourcePriority priorities = 2; // Ordered list of resource priorities
+}
+
+message ResourcePriority {
+  string resource_id = 1; // UUID as string
+  string source_attribute = 2; // Attribute on the source resource
+  int32 priority = 3; // Priority level (1 = highest)
+}
+
+
+
+// purpose of a UUID is one can delete a rule/mapping or edit it without sending the whole list again
+message CorrelationRule {
+  string id = 1; // UUID as a string
+  string resource_id = 2; // UUID as a string
+  string mode = 3;
+  google.protobuf.Struct rule_group = 4; // for the complex json rule
+}
+
+message AttributeMapping {
+  string id = 1; // UUID as a string
+  string source_resource_id = 2;
+  string source_attribute_name = 3;
+  string target_attribute_name = 4;
+  string mode = 5; // "direct", "script", "lowercase", "uppercase"
+  google.protobuf.Struct script = 6; // { "data": "...", "lang": "..." }
+}
+
+// Configurable synchronization reaction — maps a situation to an action.
+// Follows MidPoint's synchronization reaction pattern.
+message SynchronizationReaction {
+  string situation = 1; // "unmatched", "unlinked", "linked", "disputed", "deleted"
+  string action = 2;    // "add-focus", "link", "sync", "unlink", "inactivate-focus", "delete-focus", "none"
+}

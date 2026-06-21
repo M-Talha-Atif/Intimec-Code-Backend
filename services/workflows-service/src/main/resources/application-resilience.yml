@@ -1,0 +1,173 @@
+# Phase 7: Resilience4j Configuration for Fault Tolerance
+# This file configures circuit breakers, retries, timeouts, bulkheads, and rate limiters
+
+resilience4j:
+  # Circuit Breaker Configuration - Prevents cascading failures
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - io.grpc.StatusRuntimeException
+        ignoreExceptions:
+          - java.lang.IllegalArgumentException
+          - com.aidentx.workflowsservice.exception.ResourceNotFoundException
+          - com.aidentx.workflowsservice.exception.ValidationException
+    instances:
+      identityService:
+        baseConfig: default
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 5
+      notificationService:
+        baseConfig: default
+        slidingWindowSize: 15
+        failureRateThreshold: 60
+        waitDurationInOpenState: 20s
+      externalApi:
+        baseConfig: default
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+
+  # Retry Configuration - Exponential backoff for transient failures
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.net.SocketTimeoutException
+          - io.grpc.StatusRuntimeException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - java.lang.IllegalArgumentException
+          - com.aidentx.workflowsservice.exception.ResourceNotFoundException
+          - com.aidentx.workflowsservice.exception.ValidationException
+    instances:
+      identityService:
+        baseConfig: default
+        maxAttempts: 3
+        waitDuration: 1s
+        exponentialBackoffMultiplier: 2
+      notificationService:
+        baseConfig: default
+        maxAttempts: 2
+        waitDuration: 500ms
+      externalApi:
+        baseConfig: default
+        maxAttempts: 3
+        waitDuration: 1s
+
+  # Time Limiter Configuration - Prevent indefinite waits
+  timelimiter:
+    configs:
+      default:
+        cancelRunningFuture: true
+        timeoutDuration: 10s
+    instances:
+      identityService:
+        baseConfig: default
+        timeoutDuration: 5s
+      notificationService:
+        baseConfig: default
+        timeoutDuration: 3s
+      externalApi:
+        baseConfig: default
+        timeoutDuration: 10s
+
+  # Bulkhead Configuration - Isolate failures by limiting concurrent calls
+  bulkhead:
+    configs:
+      default:
+        maxConcurrentCalls: 25
+        maxWaitDuration: 0
+    instances:
+      identityService:
+        baseConfig: default
+        maxConcurrentCalls: 20
+      notificationService:
+        baseConfig: default
+        maxConcurrentCalls: 15
+      externalApi:
+        baseConfig: default
+        maxConcurrentCalls: 10
+
+  # Thread Pool Bulkhead Configuration - Separate thread pools per service
+  thread-pool-bulkhead:
+    configs:
+      default:
+        maxThreadPoolSize: 10
+        coreThreadPoolSize: 5
+        queueCapacity: 100
+        keepAliveDuration: 20s
+    instances:
+      identityService:
+        baseConfig: default
+        maxThreadPoolSize: 10
+        coreThreadPoolSize: 5
+      notificationService:
+        baseConfig: default
+        maxThreadPoolSize: 8
+        coreThreadPoolSize: 4
+      externalApi:
+        baseConfig: default
+        maxThreadPoolSize: 6
+        coreThreadPoolSize: 3
+
+  # Rate Limiter Configuration - Prevent overwhelming downstream services
+  ratelimiter:
+    configs:
+      default:
+        registerHealthIndicator: true
+        limitForPeriod: 50
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
+        eventConsumerBufferSize: 100
+    instances:
+      identityService:
+        baseConfig: default
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+      notificationService:
+        baseConfig: default
+        limitForPeriod: 50
+        limitRefreshPeriod: 1s
+      externalApi:
+        baseConfig: default
+        limitForPeriod: 30
+        limitRefreshPeriod: 1s
+
+# Spring Actuator endpoints for Resilience4j monitoring
+management:
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,circuitbreakers,circuitbreakerevents,retries,retryevents
+
+# Logging for Resilience4j events
+logging:
+  level:
+    io.github.resilience4j: DEBUG
+    io.github.resilience4j.circuitbreaker: INFO
+    io.github.resilience4j.retry: INFO

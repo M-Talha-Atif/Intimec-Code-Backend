@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: Synchronization Policy API (Identity Service)
+  description: |
+    API for the direct management of resource-specific Synchronization Policies. 
+
+    **Architectural Role**: This API is part of the Identity Service, which acts as the single source of truth for ALL policies. These policies define the "Standard Operating Procedure" for a given resource (like Active Directory) and object class (like `__ACCOUNT__`).
+
+    **Policy Creation**: Policies are typically created during application onboarding via the Core Service's Applications API, which forwards them here. However, they can also be managed directly via this API for fine-grained updates.
+
+    **Runtime Usage**: During task execution, the Task Management Service fetches these policies to build the "effective policy" that governs synchronization behavior.
+  version: 2.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Synchronization Policies
+    description: "Manage resource-specific policies for correlation, mappings, and reactions."
+
+paths:
+  /policies/synchronizations/{resourceId}/{objectClass}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+      - $ref: "#/components/parameters/ObjectClass"
+    get:
+      tags: [Synchronization Policies]
+      summary: Get synchronization policy
+      description: Retrieves the synchronization policy for a specific resource and object class combination.
+      operationId: getSynchronizationPolicy
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Synchronization policy retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SynchronizationPolicyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Synchronization Policies]
+      summary: Create or update synchronization policy
+      description: |
+        Creates a new synchronization policy or fully replaces an existing one for the specified 
+        resource and object class combination.
+      operationId: upsertSynchronizationPolicy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "common_schemas.yml#/components/schemas/SynchronizationPolicy"
+      responses:
+        "200":
+          description: Synchronization policy updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SynchronizationPolicyResponse"
+        "201":
+          description: Synchronization policy created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SynchronizationPolicyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: The specified `resourceId` does not correspond to a known application.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags: [Synchronization Policies]
+      summary: Delete synchronization policy
+      description: Deletes the synchronization policy for the specified resource and object class.
+      operationId: deleteSynchronizationPolicy
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Synchronization policy deleted successfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: The unique identifier of the application (resource).
+    ObjectClass:
+      name: objectClass
+      in: path
+      required: true
+      schema: { type: string }
+      example: "__ACCOUNT__"
+      description: The ConnID object class this policy applies to.
+
+  responses:
+    BadRequest:
+      description: The request body failed validation (e.g., invalid script syntax, malformed correlation rules).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication is required.
+    Forbidden:
+      description: Insufficient permissions.
+    NotFound:
+      description: No synchronization policy exists for the specified resource and object class.
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+
+    SynchronizationPolicyResponse:
+      type: object
+      description: "A container for a synchronization policy and its associated metadata."
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        objectClass:
+          type: string
+        policy:
+          $ref: "common_schemas.yml#/components/schemas/SynchronizationPolicy"
+        metadata:
+          $ref: "#/components/schemas/PolicyMetadata"
+
+    PolicyMetadata:
+      type: object
+      readOnly: true
+      properties:
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer }
+        enabled: { type: boolean }

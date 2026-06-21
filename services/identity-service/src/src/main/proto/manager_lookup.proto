@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package com.aidentx.iam.grpc;
+
+// Java generation options
+option java_multiple_files = true;
+option java_package = "com.aidentx.iam.grpc";
+
+/**
+ * Service for looking up manager IDs based on user-identity pairs.
+ * This service transforms identity IDs to manager IDs for users.
+ */
+service UserManagerLookupService {
+  /**
+   * Transforms user-identity pairs to user-manager pairs.
+   * Takes userId-identityId pairs as input and returns userId-managerId pairs.
+   *
+   * @param request Contains tenant ID and user-identity mappings
+   * @return Response with user-manager mappings
+   */
+  rpc getManagerIdsByUserIdentityPairs (GetManagerIdsByUserIdentityRequest)
+      returns (GetManagerIdsByUserIdentityResponse);
+}
+
+/**
+ * Request message containing user-identity pairs to transform.
+ * This accepts the exact output format from UserIdentityLookupService.
+ */
+message GetManagerIdsByUserIdentityRequest {
+  string tenantId = 1;                       // Tenant ID for isolation
+  repeated UserIdentityMapping mappings = 2; // User-identity pairs from auth service
+}
+
+/**
+ * User-identity mapping (same as in auth service proto).
+ * Represents a single user with their corresponding identity ID.
+ */
+message UserIdentityMapping {
+  string userId = 1;     // User UUID (from auth service)
+  string identityId = 2; // Identity UUID (from auth service, may be empty)
+}
+
+/**
+ * User-manager mapping result.
+ * Represents a single user with their corresponding manager ID.
+ */
+message UserManagerMapping {
+  string userId = 1;     // Same userId from input
+  string managerId = 2;  // Manager ID (empty if no manager found)
+}
+
+/**
+ * Response message containing transformed user-manager pairs.
+ * Maintains same order and count as input mappings.
+ */
+message GetManagerIdsByUserIdentityResponse {
+  repeated UserManagerMapping mappings = 1; // User-manager pairs
+  int32 totalProcessed = 2;                // Total mappings processed
+  int32 withManager = 3;                   // Mappings with non-empty manager
+}

@@ -1,0 +1,775 @@
+openapi: 3.0.3
+info:
+  title: Task Management API (Task Management Service)
+  description: |
+    API for creating, managing, executing, and monitoring synchronization tasks in the AIdentX platform.
+
+    **Architectural Role**: The Task Management Service is the "runtime orchestrator" and execution engine of the platform. It manages task definitions (schedules, targets, overrides) and executes synchronization jobs via a Quartz-based scheduler.
+
+    **Policy Resolution at Runtime**: This service does NOT store policy logic. Instead, during task execution, it:
+    1. Fetches connector configuration from the Core Service
+    2. Fetches synchronization policies from the Identity Service
+    3. Fetches governance policies (source priorities, lifecycles) from the Identity Service
+    4. Builds the complete "effective policy" by combining these with task-specific `reactionOverrides`
+    5. Executes the synchronization using the effective policy
+
+    **Reaction Override Hierarchy** (highest to lowest priority):
+    1. Task-specific `reactionOverrides` (stored in this service)
+    2. Default `reactions` from the Synchronization Policy (from Identity Service)
+    3. Fallback reactions from Governance Policy (from Identity Service, if defined)
+
+    **Key Features:**
+    - Multi-tenant task management with application-scoped tasks
+    - Quartz-based scheduler for task execution
+    - Real-time log streaming via Server-Sent Events (SSE)
+    - Live preview functionality for testing configurations before saving
+    - Comprehensive execution history and monitoring
+    - Task-specific reaction overrides for fine-grained control
+  version: 1.0.0
+  contact:
+    name: AIdentX API Support
+    email: api-support@aidentx.com
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Task Management
+    description: Core APIs for CRUD operations on persistent tasks.
+  - name: Task Control
+    description: APIs for controlling the lifecycle of a task (execute, pause, resume, terminate).
+  - name: Task Runs
+    description: APIs for viewing the execution history of tasks.
+  - name: Task Logs
+    description: APIs for streaming and viewing task execution logs (real-time and historical).
+
+paths:
+  # --- Task CRUD Operations (Scoped to Application) ---
+  /applications/{applicationId}/tasks:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationId"
+    get:
+      tags: [Task Management]
+      summary: List all tasks for an application
+      operationId: getAllTasksByApplication
+      security: [bearerAuth: []]
+      parameters:
+        - $ref: "common_components.yml#/components/parameters/PageParam"
+        - $ref: "common_components.yml#/components/parameters/SizeParam"
+        - $ref: "common_components.yml#/components/parameters/SortParam"
+      responses:
+        "200":
+          description: A paginated list of tasks for the specified application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedTaskResponse"
+        "401":
+          $ref: "common_components.yml#/components/responses/Unauthorized"
+        "403":
+          $ref: "common_components.yml#/components/responses/Forbidden"
+    post:
+      tags: [Task Management]
+      summary: Create a new task
+      operationId: createTask
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreationRequest"
+      responses:
+        "201":
+          description: Task created and scheduled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCreationResponse"
+        "400":
+          $ref: "common_components.yml#/components/responses/BadRequest"
+        "404":
+          description: The specified application does not exist.
+
+  /applications/{applicationId}/tasks/{taskId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationId"
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [Task Management]
+      summary: Get a task by ID
+      operationId: getTask
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Task details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          $ref: "common_components.yml#/components/responses/NotFound"
+    put:
+      tags: [Task Management]
+      summary: Update an existing task
+      operationId: updateTask
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdateRequest"
+      responses:
+        "200":
+          description: Task updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          $ref: "common_components.yml#/components/responses/NotFound"
+    delete:
+      tags: [Task Management]
+      summary: Delete a task
+      operationId: deleteTask
+      security: [bearerAuth: []]
+      responses:
+        "204":
+          description: Task and its schedule were successfully deleted.
+        "404":
+          $ref: "common_components.yml#/components/responses/NotFound"
+
+  /tasks:
+    get:
+      tags: [Task Management]
+      summary: List all tasks for a tenant
+      operationId: getAllTasks
+      security: [bearerAuth: []]
+      parameters:
+        - $ref: "common_components.yml#/components/parameters/PageParam"
+        - $ref: "common_components.yml#/components/parameters/SizeParam"
+        - $ref: "common_components.yml#/components/parameters/SortParam"
+      responses:
+        "200":
+          description: A paginated list of all tasks for the tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedTaskResponse"
+
+  # --- Task Control Operations ---
+  /tasks/{taskId}/execute:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    post:
+      tags: [Task Control]
+      summary: Trigger immediate execution of a task
+      description: "Only tasks with a 'MANUAL' schedule type can be executed via this endpoint."
+      operationId: executeTask
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Task execution was successfully triggered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskExecutionResponse"
+        "400":
+          description: "Execution failed because the task's schedule type is not 'MANUAL'."
+        "409":
+          description: "Conflict. The task may already be running."
+
+  /tasks/{taskId}/pause:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    post:
+      tags: [Task Control]
+      summary: Pause a scheduled task
+      operationId: pauseTask
+      security: [bearerAuth: []]
+      responses:
+        "200": { description: "Task successfully paused." }
+        "404": { $ref: "common_components.yml#/components/responses/NotFound" }
+
+  /tasks/{taskId}/resume:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    post:
+      tags: [Task Control]
+      summary: Resume a paused task
+      operationId: resumeTask
+      security: [bearerAuth: []]
+      responses:
+        "200": { description: "Task successfully resumed." }
+        "404": { $ref: "common_components.yml#/components/responses/NotFound" }
+
+  # --- Task Run History ---
+  /tasks/{taskId}/runs:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [Task Runs]
+      summary: Get task execution history
+      operationId: getTaskRunHistory
+      security: [bearerAuth: []]
+      parameters:
+        - $ref: "common_components.yml#/components/parameters/PageParam"
+        - $ref: "common_components.yml#/components/parameters/SizeParam"
+        - $ref: "common_components.yml#/components/parameters/SortParam"
+      responses:
+        "200":
+          description: A paginated list of execution runs for the task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedTaskRunResponse"
+        "404":
+          $ref: "common_components.yml#/components/responses/NotFound"
+
+  /tasks/{taskId}/runs/{executionId}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/ExecutionId"
+    get:
+      tags: [Task Runs]
+      summary: Get details of a specific task run
+      operationId: getTaskRun
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Detailed information about the task run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskRunResponse"
+        "404":
+          $ref: "common_components.yml#/components/responses/NotFound"
+
+  # --- Task Diagnostics (Logs & Preview) ---
+  /tasks/preview:
+    post:
+      tags: [Task Diagnostics]
+      summary: Preview a task configuration with live log streaming
+      description: |
+        Performs a live, one-time execution of a temporary task based on the provided configuration. This connects to the external resource, fetches data, and simulates the sync process. The results, including correlation, mapping, and logs, are streamed back in real-time via Server-Sent Events (SSE). The temporary task is automatically deleted after the preview completes.
+      operationId: previewTask
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        description: The complete, temporary task configuration to execute for the preview.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPreviewRequest"
+      responses:
+        "200":
+          description: "SSE stream initiated. The stream will contain 'log', 'result', and a final 'completion' or 'error' event."
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  id:1
+                  event:log
+                  data:{"timestamp":"2025-10-31T12:00:01Z", "level":"INFO", "message":"Connecting to resource..."}
+
+                  id:2
+                  event:result
+                  data:{"correlationResult": {...}, "mappingResult": {...}}
+
+                  id:3
+                  event:completion
+                  data:{"status":"COMPLETED", "message":"Preview finished."}
+        "400":
+          { $ref: "common_components.yml#/components/responses/BadRequest" }
+        "424":
+          {
+            $ref: "common_components.yml#/components/responses/DependencyFailure",
+          }
+
+  /tasks/{taskId}/runs/{executionId}/logs/stream:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/ExecutionId"
+    get:
+      tags: [Task Diagnostics]
+      summary: Stream logs for a specific task run
+      operationId: streamRunLogs
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: SSE stream of log events for the specified execution.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "404":
+          $ref: "common_components.yml#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: "common_components.yml#/components/securitySchemes/bearerAuth"
+
+  parameters:
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Application unique identifier
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Task unique identifier
+    ExecutionId:
+      name: executionId
+      in: path
+      required: true
+      schema: { type: string }
+      description: The unique ID of the execution run
+
+  schemas:
+    # --- DTOs matching Java implementation ---
+    TaskCreationRequest:
+      type: object
+      required: [name, category, priority, ownerId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Task name
+          example: "Daily Backup Task"
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Task description
+          example: "Backup user data daily at 2 AM"
+        category:
+          type: string
+          description: Task category
+          example: "MAINTENANCE"
+        executionDateTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Scheduled execution date and time (ISO 8601 format). 
+            For one-time tasks, this is required and must be in the future.
+            For recurring tasks, this is the first execution time (optional, defaults to now).
+            For manual tasks, this is ignored.
+          example: "2025-10-03T02:00:00Z"
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 9
+          description: "Task priority (1=lowest, 9=highest)"
+          example: 5
+        scheduleType:
+          type: string
+          description: Schedule type (ONCE, CRON, INTERVAL, MANUAL)
+          default: "ONCE"
+          example: "ONCE"
+        cronExpression:
+          type: string
+          nullable: true
+          description: |
+            Cron expression for CRON schedule type in Quartz format (6-7 fields).
+            Examples: '0 0 12 * * ?' for daily at noon, '0 */15 * * * ?' for every 15 minutes.
+          example: "0 0 12 * * ?"
+        intervalSeconds:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: |
+            Interval in seconds for INTERVAL schedule type. Must be greater than 0.
+            Example: 300 (every 5 minutes), 3600 (every hour)
+          example: 300
+        ownerId:
+          type: string
+          format: uuid
+          description: |
+            The UUID of the user who owns this task. The owner has full control over the task.
+          example: "789e4567-e89b-12d3-a456-426614174111"
+        taskConfig:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: |
+            Optional task configuration stored as JSONB. 
+            This allows flexible configuration storage for different task types.
+          example:
+            backupType: "INCREMENTAL"
+            retentionDays: 30
+            compressionEnabled: true
+
+    TaskUpdateRequest:
+      type: object
+      description: "Allows updating of task properties. All fields are optional."
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Task name
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Task description
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 9
+          description: Task priority
+        executionDateTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Updated execution date/time (must be in the future if provided)
+        scheduleType:
+          type: string
+          description: Schedule type (ONCE, CRON, INTERVAL, MANUAL)
+        cronExpression:
+          type: string
+          nullable: true
+          description: Cron expression in Quartz format - required if scheduleType is CRON
+        intervalSeconds:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Interval in seconds - required if scheduleType is INTERVAL
+        taskConfig:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Task-specific configuration
+        assignedTo:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs assigned to this task
+        businessStatus:
+          type: string
+          nullable: true
+          description: Custom business status for the task
+
+    TaskPreviewRequest:
+      type: object
+      required: [category, applicationId]
+      description: |
+        Request body for previewing a task execution. The task will be created temporarily, 
+        executed, and then deleted.
+      properties:
+        category:
+          type: string
+          description: Task category
+          example: "MAINTENANCE"
+        applicationId:
+          type: string
+          format: uuid
+          description: Application ID this task belongs to
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        taskConfig:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: |
+            Optional task configuration stored as JSON. 
+            This allows flexible configuration storage for different task types.
+          example:
+            syncType: "FULL"
+            batchSize: 100
+
+    TaskCreationResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: UUID of the created task
+          example: "abc12345-e29b-41d4-a716-446655440001"
+        status:
+          type: string
+          description: Status of the operation
+          example: "CREATED"
+        message:
+          type: string
+          description: Human-readable message
+          example: "Task created successfully"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when task was created
+          example: "2025-10-03T14:30:00Z"
+        scheduledFor:
+          type: string
+          format: date-time
+          nullable: true
+          description: Scheduled execution time
+          example: "2025-10-03T15:00:00Z"
+
+    TaskExecutionResponse:
+      type: object
+      description: Response when a task execution is triggered
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Task UUID
+        executionId:
+          type: string
+          description: Unique execution ID for this run
+        message:
+          type: string
+          description: Status message
+        triggeredAt:
+          type: string
+          format: date-time
+          description: Timestamp when execution was triggered
+
+    TaskResponse:
+      type: object
+      description: Complete task information including metadata and execution status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        taskType:
+          type: string
+          nullable: true
+        category:
+          type: string
+        priority:
+          type: integer
+        owner:
+          $ref: "#/components/schemas/UserReference"
+        assignedTo:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserReference"
+        tenantId:
+          type: string
+        application:
+          $ref: "#/components/schemas/ApplicationReference"
+        persistenceStatus:
+          type: string
+          enum: [TRANSIENT, PERSISTENT]
+          description: Whether task is temporary or persistent
+        executionStatus:
+          type: string
+          enum:
+            [
+              PENDING,
+              RUNNABLE,
+              RUNNING,
+              WAITING,
+              SUSPENDED,
+              CLOSED,
+              COMPLETED,
+              FAILED,
+            ]
+          description: Current execution state
+        businessStatus:
+          type: string
+          nullable: true
+          description: Custom business status
+        taskConfig:
+          type: object
+          additionalProperties: true
+          nullable: true
+        executionConfig:
+          type: string
+          nullable: true
+        scheduleType:
+          type: string
+          enum: [ONCE, CRON, INTERVAL, MANUAL]
+        cronExpression:
+          type: string
+          nullable: true
+        intervalSeconds:
+          type: integer
+          nullable: true
+        bindingType:
+          type: string
+          enum: [TIGHT, LOOSE]
+          nullable: true
+          description: Task binding type
+        earliestStartTime:
+          type: string
+          format: date-time
+          nullable: true
+        latestStartTime:
+          type: string
+          format: date-time
+          nullable: true
+        latestFinishTime:
+          type: string
+          format: date-time
+          nullable: true
+        nextExecution:
+          type: string
+          format: date-time
+          nullable: true
+        lastExecution:
+          type: string
+          format: date-time
+          nullable: true
+        misfireAction:
+          type: string
+          enum: [EXECUTE_IMMEDIATELY, RESCHEDULE, FORGET]
+          nullable: true
+          description: Action to take when task misses scheduled time
+        threadStopAction:
+          type: string
+          enum: [RESTART, RESCHEDULE, SUSPEND, CLOSE]
+          nullable: true
+          description: Action to take when task thread stops unexpectedly
+        isResilient:
+          type: boolean
+          nullable: true
+          description: Whether task is resilient to failures
+        lastRunStartTimestamp:
+          type: string
+          format: date-time
+          nullable: true
+        lastRunFinishTimestamp:
+          type: string
+          format: date-time
+          nullable: true
+        executionNodeId:
+          type: string
+          nullable: true
+          description: ID of the node where task is/was executing
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          $ref: "#/components/schemas/UserReference"
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          $ref: "#/components/schemas/UserReference"
+        version:
+          type: integer
+          description: Optimistic locking version
+
+    TaskRunResponse:
+      type: object
+      description: Information about a specific task execution run
+      properties:
+        executionId:
+          type: string
+          description: Unique execution ID
+        taskId:
+          type: string
+          format: uuid
+          description: Task UUID this run belongs to
+        status:
+          type: string
+          enum:
+            [
+              PENDING,
+              RUNNABLE,
+              RUNNING,
+              WAITING,
+              SUSPENDED,
+              CLOSED,
+              COMPLETED,
+              FAILED,
+            ]
+          description: Execution status
+        startTime:
+          type: string
+          format: date-time
+          description: When execution started
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: When execution completed
+        durationMs:
+          type: integer
+          format: int64
+          nullable: true
+          description: Duration in milliseconds
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error message if execution failed
+        stackTrace:
+          type: string
+          nullable: true
+          description: Stack trace if execution failed
+        createdAt:
+          type: string
+          format: date-time
+          description: When this run record was created
+
+    TaskLogStreamResponse:
+      type: object
+      description: Log entry for task execution
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the log entry was created
+        level:
+          type: string
+          description: Log level (INFO, WARN, ERROR, DEBUG, etc.)
+          example: "INFO"
+        message:
+          type: string
+          description: Log message
+        taskId:
+          type: string
+          format: uuid
+          nullable: true
+        executionId:
+          type: string
+          nullable: true
+        tenantId:
+          type: string
+          nullable: true
+
+    PagedTaskResponse:
+      type: object
+      description: Paginated list of tasks
+      allOf:
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: "#/components/schemas/TaskResponse"
+        - $ref: "common_components.yml#/components/schemas/PaginationMetadata"
+
+    PagedTaskRunResponse:
+      type: object
+      description: Paginated list of task runs
+      allOf:
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: "#/components/schemas/TaskRunResponse"
+        - $ref: "common_components.yml#/components/schemas/PaginationMetadata"
+
+    ApplicationReference:
+      $ref: "common_components.yml#/components/schemas/ApplicationReference"
+
+    UserReference:
+      $ref: "common_components.yml#/components/schemas/UserReference"

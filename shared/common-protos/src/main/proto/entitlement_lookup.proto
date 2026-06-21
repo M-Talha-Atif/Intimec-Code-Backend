@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package com.aidentx.iam.grpc;
+
+// ─────────────────────────────────────────────────────────────────────
+// Java codegen options
+//   java_multiple_files = true  → each message/service gets its own .java file
+//                                 (cleaner imports, matches Spring conventions)
+//   java_package              → controls the Java package of generated classes
+// ─────────────────────────────────────────────────────────────────────
+option java_multiple_files = true;
+option java_package = "com.aidentx.iam.grpc";
+
+// =====================================================================
+//  SERVICE DEFINITION
+// =====================================================================
+//
+//  In REST you'd write:
+//      GET /api/v1/entitlements/{id}?tenantId=...
+//
+//  In gRPC you define an RPC method instead. The protobuf compiler
+//  generates a Java interface (stub) that both client and server implement.
+//  Under the hood it uses HTTP/2 + binary serialization (protobuf),
+//  which is ~10x faster than JSON over HTTP/1.1 — ideal for
+//  microservice-to-microservice calls where humans never read the payload.
+// =====================================================================
+
+/**
+ * EntitlementLookupService — internal gRPC service for fetching
+ * entitlement details by ID.
+ *
+ * Why gRPC instead of REST here?
+ *   • This is a service-to-service call (e.g., access-request-service
+ *     needs entitlement metadata to evaluate policies).
+ *   • Binary protobuf is smaller & faster than JSON.
+ *   • The .proto file IS the contract — no Swagger/OpenAPI drift.
+ *   • HTTP/2 multiplexing means many concurrent lookups over one connection.
+ */
+service EntitlementLookupService {
+
+  // ── Unary RPC ──────────────────────────────────────────────────────
+  // "Unary" = one request in, one response out (like a normal REST call).
+  // gRPC also supports streaming, but we don't need it here.
+  // ───────────────────────────────────────────────────────────────────
+
+  /**
+   * Fetches a single entitlement by its UUID.
+   *
+   * REST equivalent:
+   *   GET /api/v1/entitlements/{id}
+   *   Headers: X-Tenant-Id: <tenantId>
+   *
+   * Returns NOT_FOUND (gRPC status code 5) if the entitlement doesn't exist
+   * for the given tenant. In REST that would be HTTP 404.
+   */
+  rpc GetEntitlementById (GetEntitlementByIdRequest)
+      returns (GetEntitlementByIdResponse);
+}
+
+// =====================================================================
+//  REQUEST MESSAGE
+// =====================================================================
+//
+//  In REST, "id" would be a path parameter and "tenantId" a header.
+//  In gRPC, everything goes into one strongly-typed message — no ambiguity
+//  about where each field lives (path vs query vs header vs body).
+//
+//  Field numbers (= 1, = 2) are the WIRE identifiers. They must NEVER
+//  change once deployed — that's how protobuf stays backward-compatible.
+//  You can add new fields with new numbers, but never reuse or renumber.
+// =====================================================================
+
+message GetEntitlementByIdRequest {
+  string tenant_id = 1;      // Tenant isolation — matches your @Column("tenant_id")
+  string entitlement_id = 2; // UUID of the entitlement — maps to Entitlement.id
+}
+
+// =====================================================================
+//  RESPONSE MESSAGE
+// =====================================================================
+//
+//  This mirrors your EntitlementResponseDto record. Every field from
+//  the DTO gets a protobuf field with an appropriate type.
+//
+//  Key type mappings (Java → protobuf):
+//    UUID       → string   (protobuf has no UUID type; serialize as string)
+//    Long       → int64    (epoch millis for timestamps)
+//    boolean    → bool
+//    String     → string
+//    List<String> → repeated string
+//    Map<String,Object> → string (serialized as JSON string; protobuf maps
+//                                  can't hold heterogeneous values)
+// =====================================================================
+
+message GetEntitlementByIdResponse {
+
+  // ── Core identity fields ──────────────────────────────────────────
+  string id = 1;                 // Entitlement UUID
+  string tenant_id = 2;         // Tenant this belongs to
+  string resource_id = 3;       // The application/resource UUID
+  string source_uid = 4;        // Unique ID on the source system (e.g., AD objectGUID)
+  string application_name = 5;  // Resolved app name (from ApplicationClient)
+  string display_name = 6;      // Human-readable name
+  string description = 7;       // Free-text description
+  string object_class = 8;      // ConnID object class (e.g., "__GROUP__")
+  string kind = 9;              // Entitlement kind: "entitlement", "group", "role"
+
+  // ── Source system attributes ──────────────────────────────────────
+  // Stored as JSONB in Postgres → serialized to JSON string here.
+  // The consumer deserializes with their own JSON library.
+  // Why not protobuf Struct? It's verbose and poorly supported in Java.
+  string attributes_json = 10;
+
+  // ── Governance metadata ───────────────────────────────────────────
+  string lifecycle = 11;        // "Active", "Deprecated", "Orphaned", "Inactive"
+  string risk_level = 12;       // "Low", "Medium", "High", "Critical"
+  string risk_reason = 13;      // Why this risk level was assigned
+  bool requestable = 14;        // Can users self-service request this?
+
+  // repeated = a list. Like List<String> in Java.
+  // Wire-compatible with an empty list (zero elements) by default.
+  repeated string classification = 15;  // ["SOX", "PII", "GDPR"]
+
+  string identity_type = 16;       // "Employee", "Non-Employee", "Non-Human"
+  string privilege_level = 17;     // "Read", "Write", "Admin"
+  string owner_id = 18;           // UUID of the governance owner
+  bool require_approval = 19;     // Approval workflow required?
+  bool allowed_automated_grant = 20; // Birthright auto-grant allowed?
+
+  // ── Time-boxing ───────────────────────────────────────────────────
+  // int64 for nullable longs: 0 means "not set" (protobuf default).
+  // If you need to distinguish 0 from null, use google.protobuf.Int64Value
+  // (wrapper type), but for durations, 0ms = "no limit" is fine semantically.
+  int64 max_duration_ms = 21;        // Max assignment duration (0 = unlimited)
+  int64 auto_expire_duration_ms = 22; // Auto-expiry duration (0 = none)
+
+  // ── Assignment count ──────────────────────────────────────────────
+  int64 assigned_users_count = 23;  // Number of users assigned this entitlement
+
+  // ── Timestamps (epoch millis) ─────────────────────────────────────
+  int64 created_at = 24;
+  int64 updated_at = 25;
+}

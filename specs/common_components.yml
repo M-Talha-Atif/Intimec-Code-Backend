@@ -1,0 +1,390 @@
+openapi: 3.0.3
+info:
+  title: Common Components for AIdentX Platform APIs
+  version: 1.0.0
+  description: |
+    Shared library of OpenAPI components (parameters, responses, schemas) 
+    used across all AIdentX microservices.
+
+    This file should be referenced using `$ref` in individual API specifications.
+
+paths: {}
+
+components:
+  # --- SECURITY SCHEMES ---
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token-based authentication
+
+  # --- COMMON PARAMETERS ---
+  parameters:
+    # Pagination Parameters
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Page number (zero-indexed)
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page (max 100)
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "createdAt,desc"
+      description: |
+        Sort criteria in the format: property,(asc|desc). 
+        Multiple sort criteria can be specified separated by semicolons.
+        Example: "name,asc;createdAt,desc"
+
+    # Common Path Parameters
+    TenantIdHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Tenant identifier for multi-tenancy
+
+    UserIdHeader:
+      name: X-User-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: User identifier for audit trails
+
+  # --- COMMON RESPONSES ---
+  responses:
+    # Success Responses
+    NoContent:
+      description: The request was successful but there is no content to return
+
+    # Error Responses
+    BadRequest:
+      description: |
+        Bad request - The request payload is malformed or failed validation checks.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:validation"
+            title: "Validation Error"
+            status: 400
+            detail: "The request body failed validation."
+            instance: "/api/v1/resource"
+            errors:
+              - field: "name"
+                message: "Name is required"
+
+    Unauthorized:
+      description: |
+        Unauthorized - Authentication is required. 
+        The provided JWT is missing, invalid, or expired.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Authentication token is missing or invalid."
+
+    Forbidden:
+      description: |
+        Forbidden - Insufficient permissions. 
+        The authenticated user is not authorized to perform this action.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:forbidden"
+            title: "Forbidden"
+            status: 403
+            detail: "You do not have permission to access this resource."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:not-found"
+            title: "Resource Not Found"
+            status: 404
+            detail: "The requested resource was not found."
+
+    Conflict:
+      description: |
+        Conflict - The request conflicts with the current state of the resource.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:conflict"
+            title: "Resource Conflict"
+            status: 409
+            detail: "A resource with the same identifier already exists."
+
+    UnprocessableEntity:
+      description: |
+        Unprocessable Entity - The request is well-formed but cannot be processed 
+        due to a business rule violation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:business-rule-violation"
+            title: "Business Rule Violation"
+            status: 422
+            detail: "The operation violates a business rule constraint."
+
+    DependencyFailure:
+      description: |
+        Failed Dependency - An upstream service required to complete the request failed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:dependency-failure"
+            title: "Dependency Failure"
+            status: 424
+            detail: "Failed to communicate with an upstream service."
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:internal-error"
+            title: "Internal Server Error"
+            status: 500
+            detail: "An unexpected error occurred while processing your request."
+
+  # --- COMMON SCHEMAS ---
+  schemas:
+    # Error Response (RFC 7807 Problem Details)
+    ErrorResponse:
+      type: object
+      description: |
+        A problem details object following RFC 7807 standard for describing API errors.
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: |
+            A URI reference that identifies the problem type. 
+            Should be a stable, unique identifier for the error category.
+          example: "urn:aidentx:errors:validation"
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type
+          example: "Validation Error"
+        status:
+          type: integer
+          format: int32
+          description: The HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem
+          example: "The 'name' field is required and cannot be empty."
+        instance:
+          type: string
+          format: uri
+          description: A URI reference that identifies the specific occurrence of the problem
+          example: "/api/v1/applications"
+        errors:
+          type: array
+          description: Detailed validation errors (for 400 Bad Request)
+          items:
+            $ref: "#/components/schemas/ValidationError"
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred
+          example: "2025-11-01T10:30:00Z"
+        traceId:
+          type: string
+          description: Trace ID for debugging purposes
+          example: "abc123-def456-ghi789"
+
+    ValidationError:
+      type: object
+      description: Detailed information about a specific validation error
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: The field that failed validation
+          example: "email"
+        message:
+          type: string
+          description: Description of the validation failure
+          example: "Must be a valid email address"
+        rejectedValue:
+          description: The value that was rejected
+          example: "invalid-email"
+
+    # Pagination Metadata
+    PaginationMetadata:
+      type: object
+      description: Pagination information for list responses
+      required:
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 0
+          description: Current page number (zero-indexed)
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          description: Number of items per page
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total number of elements across all pages
+          example: 100
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 5
+        first:
+          type: boolean
+          description: Whether this is the first page
+          example: true
+        last:
+          type: boolean
+          description: Whether this is the last page
+          example: false
+        hasNext:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        hasPrevious:
+          type: boolean
+          description: Whether there is a previous page
+          example: false
+        numberOfElements:
+          type: integer
+          minimum: 0
+          description: Number of elements in the current page
+          example: 20
+        empty:
+          type: boolean
+          description: Whether the current page is empty
+          example: false
+
+    # User Reference
+    UserReference:
+      type: object
+      description: Reference to a user entity
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User unique identifier
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: User display name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@example.com"
+
+    # Application Reference
+    ApplicationReference:
+      type: object
+      description: Reference to an application/resource
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Application unique identifier
+          example: "app-123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: Application name
+          example: "Corporate Active Directory"
+        type:
+          type: string
+          description: Application type
+          example: "LDAP"
+
+    # Metadata
+    AuditMetadata:
+      type: object
+      description: Audit trail metadata for entities
+      required:
+        - createdAt
+        - createdBy
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the entity was created
+          example: "2025-11-01T10:00:00Z"
+        createdBy:
+          $ref: "#/components/schemas/UserReference"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the entity was last updated
+          example: "2025-11-01T12:30:00Z"
+        updatedBy:
+          $ref: "#/components/schemas/UserReference"
+        version:
+          type: integer
+          minimum: 0
+          description: Optimistic locking version number
+          example: 3

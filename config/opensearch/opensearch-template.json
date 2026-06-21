@@ -1,0 +1,36 @@
+{
+  "index_patterns": ["*-logs"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date", "format": "epoch_millis" },
+        "log.level": { "type": "keyword" },
+        "log.logger": { "type": "keyword" },
+        "thread": { "type": "keyword" },
+        "message": { "type": "text" },
+        "id": { "type": "keyword" },
+        "source": { "type": "keyword" },
+        "microservice": { "type": "keyword" },
+        "trace.id": { "type": "keyword" },
+        "category": { "type": "keyword" },
+        "object.type": { "type": "keyword" },
+        "object.id": { "type": "keyword" },
+        "retryable": { "type": "boolean" },
+        "details": { "type": "object", "enabled": true },
+        "isPinned":{ "type": "boolean", "null_value": false },
+        "pinnedAt" : { "type": "date", "format": "epoch_millis", "null_value": "1970-01-01T00:00:00Z" },
+        "pinnerId": { "type": "keyword", "null_value": "" },
+        "isResolved": { "type": "boolean", "null_value": false },
+        "resolverId" : { "type": "keyword", "null_value": "" },
+        "resolvedAt": { "type": "date", "format": "epoch_millis", "null_value": "1970-01-01T00:00:00Z" },
+        "pinned.name": { "type": "text" },
+        "pinned.description": { "type": "text" },
+        "updatedAt" : { "type": "date", "format": "epoch_millis", "null_value": "1970-01-01T00:00:00Z" }
+      }
+    }
+  }
+}

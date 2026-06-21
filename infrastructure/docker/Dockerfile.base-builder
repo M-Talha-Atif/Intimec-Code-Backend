@@ -1,0 +1,65 @@
+# Base Builder Image for All Intimec Services
+# This image contains:
+# 1. All Maven dependencies downloaded
+# 2. All shared modules built and installed to local Maven repo
+#
+# Build this image once, and all service Dockerfiles can reuse it.
+# Build command:
+#   docker build -f infrastructure/docker/Dockerfile.base-builder -t intimec-base-builder:latest .
+
+# Stage 1: Dependency Cache
+# We use this stage to download all dependencies.
+# This layer will be cached unless any pom.xml file changes.
+FROM maven:3.9-eclipse-temurin-21 AS deps
+WORKDIR /app
+
+# Copy the aggregator POM
+COPY pom.xml .
+
+# Copy shared modules POMs
+COPY shared/pom.xml shared/
+COPY shared/dgraph-client/pom.xml shared/dgraph-client/
+COPY shared/auditlog-dto/pom.xml shared/auditlog-dto/
+COPY shared/unified-logging/pom.xml shared/unified-logging/
+COPY shared/encryption-service/pom.xml shared/encryption-service/
+COPY shared/common-protos/pom.xml shared/common-protos/
+COPY shared/connector-framework/pom.xml shared/connector-framework/
+COPY shared/dal-core/pom.xml shared/dal-core/
+COPY shared/iam-dtos/pom.xml shared/iam-dtos/
+COPY shared/iam-events/pom.xml shared/iam-events/
+
+# Copy service POMs (needed for Maven reactor)
+COPY services/pom.xml services/
+COPY services/api-gateway/src/pom.xml services/api-gateway/src/
+COPY services/application-permissions-service/src/pom.xml services/application-permissions-service/src/
+COPY services/auth-service/src/pom.xml services/auth-service/src/
+COPY services/configuration-service/src/pom.xml services/configuration-service/src/
+COPY services/connector-runtime-service/src/pom.xml services/connector-runtime-service/src/
+COPY services/core-service/src/pom.xml services/core-service/src/
+COPY services/llm-service/src/pom.xml services/llm-service/src/
+COPY services/identity-service/src/pom.xml services/identity-service/src/
+COPY services/task-management-service/src/pom.xml services/task-management-service/src/
+COPY services/workflows-service/pom.xml services/workflows-service/
+COPY services/access-portal-service/pom.xml services/access-portal-service/
+
+# Download all dependencies for all modules
+# Using cache mount for Maven repository so downloads persist across builds
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B dependency:go-offline
+
+# Stage 2: Build Shared Modules
+# This stage builds the shared libraries.
+# It will be cached unless source code in 'shared/' changes.
+FROM deps AS shared-builder
+
+# Install protoc for protobuf compilation (needed by common-protos and some services)
+RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
+
+COPY shared/ shared/
+
+# Install shared modules to the local maven repo (with cache mount)
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -pl shared -am clean install -DskipTests
+
+# This is the final stage that service Dockerfiles will use as their base
+# Services will start FROM intimec-base-builder:latest

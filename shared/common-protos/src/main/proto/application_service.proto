@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.application;
+
+import "google/protobuf/struct.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.application";
+option java_outer_classname = "ApplicationServiceProto";
+
+/**
+ * Service for managing and retrieving application configurations.
+ * Used for internal service-to-service communication.
+ */
+service ApplicationService {
+  // Fetch application configuration by ID
+  rpc GetApplication(GetApplicationRequest) returns (GetApplicationResponse);
+
+  // Fetch multiple applications by tenant
+  rpc GetApplicationsByTenant(GetApplicationsByTenantRequest)
+      returns (GetApplicationsByTenantResponse);
+
+  // Fetch application schema attributes by application ID
+  rpc GetApplicationSchemaAttributes(GetApplicationSchemaAttributesRequest)
+      returns (GetApplicationSchemaAttributesResponse);
+}
+
+// === Request Messages ===
+
+message GetApplicationRequest {
+  string tenant_id = 1;
+  string application_id = 2; // UUID as string
+}
+
+message GetApplicationsByTenantRequest {
+  string tenant_id = 1;
+  int32 page_size = 2;
+  int32 page_offset = 3;
+}
+
+message GetApplicationSchemaAttributesRequest {
+  string tenant_id = 1;
+  string application_id = 2; // UUID as string
+}
+
+// === Response Messages ===
+
+message GetApplicationResponse { ApplicationDTO application = 1; }
+
+message GetApplicationsByTenantResponse {
+  repeated ApplicationDTO applications = 1;
+  int64 total_count = 2;
+}
+
+message GetApplicationSchemaAttributesResponse {
+  repeated ApplicationSchemaAttributeDTO attributes = 1;
+}
+
+// === Data Transfer Objects ===
+
+message ApplicationDTO {
+  string id = 1; // UUID as string
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  bool is_authoritative = 5;
+  string associated_schema_id = 6; // UUID as string
+
+  // Lifecycle and operational status
+  string lifecycle_status = 7;   // DRAFT, ACTIVE, INACTIVE, ARCHIVED
+  string operational_status = 8; // IDLE, RUNNING, ERROR, MAINTENANCE
+  string last_status_details = 9;
+
+  // Ownership and classification
+  google.protobuf.Struct technical_owners = 10;
+  google.protobuf.Struct business_owners = 11;
+  string identity_type = 12;
+  string risk_level = 13;
+  google.protobuf.Struct categories = 14;
+  google.protobuf.Struct compliance_labels = 15;
+  google.protobuf.Struct scopes = 16;
+  google.protobuf.Struct department = 17;
+
+  // Core configuration - MOST IMPORTANT for task execution
+  google.protobuf.Struct connector_configuration = 18;
+  google.protobuf.Struct access_policy = 19;
+  google.protobuf.Struct provisioning_policy = 20;
+
+  // Metadata
+  string icon_path = 21;
+  int64 created_at = 22; // Unix timestamp in milliseconds
+  int64 updated_at = 23; // Unix timestamp in milliseconds
+}
+
+message ApplicationSchemaAttributeDTO {
+  string id = 1; // UUID as string
+  string application_id = 2; // UUID as string
+  string name = 3;
+  string type = 4;
+  string object_type = 5;       // e.g. "__ACCOUNT__", "__GROUP__", "roles"
+  bool is_display_attribute = 6;
+  google.protobuf.Struct flags = 7;
+  string object_type_kind = 8;  // "account", "entitlement", "generic"
+  string category = 9;          // "identity", "entitlement", "risk", "metadata"
+  string description = 10;
+  bool is_description_attribute = 11;
+}
+

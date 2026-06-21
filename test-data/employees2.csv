@@ -1,0 +1,6 @@
+uid,username,email,firstName,lastName,department,jobTitle,manager,employeeType,status,groups,createdDate,lastModified
+EMP101,lucas.martinez,lucas.martinez@company.com,Lucas,Martinez,Engineering,Backend Developer,MGR010,Full-Time,active,developers|engineers,2025-03-10,2026-02-27
+EMP102,sofia.nakamura,sofia.nakamura@company.com,Sofia,Nakamura,Finance,Financial Analyst,MGR011,Full-Time,active,finance|analysts,2025-04-01,2026-02-27
+EMP103,omar.hassan,omar.hassan@company.com,Omar,Hassan,Engineering,QA Engineer,MGR010,Full-Time,active,engineers|qa,2025-05-15,2026-02-27
+EMP104,priya.sharma,priya.sharma@company.com,Priya,Sharma,Product,Product Manager,MGR012,Full-Time,active,product|managers,2025-06-20,2026-02-27
+EMP105,erik.lindberg,erik.lindberg@company.com,Erik,Lindberg,Sales,Account Executive,MGR013,Contract,active,sales,2025-07-01,2026-02-27

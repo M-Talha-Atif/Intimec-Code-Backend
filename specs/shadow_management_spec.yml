@@ -1,0 +1,768 @@
+openapi: 3.0.3
+info:
+  title: Shadow Management API
+  description: |
+    API for managing Shadow Objects in the Identity Governance and Reconciliation Engine.
+    
+    Shadow objects are persistent representations of resource objects (accounts, groups, entitlements) 
+    in the identity-service. They serve as the intermediary layer between external resources and 
+    canonical Identity objects.
+    
+    **Shadow Lifecycle:**
+    - Created/updated during discovery/reconciliation operations
+    - Store resource metadata and linking information persistently
+    - Store resource attributes temporarily during operations (cleared after processing)
+    - Can be linked to Identity objects for correlation
+    - Deleted when resource object is deleted, resource is removed, or manually deleted
+    
+    **Key Concepts:**
+    - **resourceUid**: Unique identifier from the source resource (e.g., LDAP DN, database primary key)
+    - **Linking**: Association between a Shadow and a canonical Identity object
+    - **Attributes**: Temporary key-value storage of resource object attributes during operations
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production server
+  - url: https://api-staging.example.com/api/v1
+    description: Staging server
+
+tags:
+  - name: Shadows
+    description: Manage shadow objects
+  - name: Shadow Linking
+    description: Link and unlink shadows to identities
+
+paths:
+  /shadows:
+    get:
+      tags:
+        - Shadows
+      summary: List shadows
+      description: |
+        Retrieves a paginated list of shadow objects with optional filtering.
+        Supports filtering by resource, object class, synchronization situation, and link status.
+      operationId: listShadows
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: resourceId
+          in: query
+          description: Filter by resource identifier
+          schema:
+            type: string
+          example: "ldap-prod-001"
+        - name: objectClass
+          in: query
+          description: Filter by ConnID object class
+          schema:
+            type: string
+          example: "__ACCOUNT__"
+        - name: situation
+          in: query
+          description: Filter by synchronization situation
+          schema:
+            type: string
+            enum:
+              - LINKED
+              - UNLINKED
+              - UNMATCHED
+              - DISPUTED
+              - DELETED
+        - name: linked
+          in: query
+          description: Filter by link status (true = linked to an identity, false = unlinked)
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          description: Page number (0-based)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Page size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: sort
+          in: query
+          description: Sort field and direction (e.g., "createdAt,desc" or "resourceUid,asc")
+          schema:
+            type: string
+          example: "createdAt,desc"
+      responses:
+        '200':
+          description: List of shadows retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  
+  /shadows/{shadowId}:
+    parameters:
+      - $ref: '#/components/parameters/ShadowId'
+    
+    get:
+      tags:
+        - Shadows
+      summary: Get shadow by ID
+      description: |
+        Retrieves a specific shadow object by its ID.
+        Note: Resource attributes are only populated during active operations and may be empty.
+      operationId: getShadow
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Shadow retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowResponse'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                resourceId: "ldap-prod-001"
+                resourceUid: "uid=jdoe,ou=people,dc=company,dc=com"
+                objectClass: "__ACCOUNT__"
+                kind: "account"
+                linkedIdentityId: "123e4567-e89b-12d3-a456-426614174000"
+                synchronizationSituation: "LINKED"
+                attributes: {}
+                metadata:
+                  createdAt: "2025-01-15T10:30:00Z"
+                  updatedAt: "2025-01-20T14:45:00Z"
+                  lastSynchronizedAt: "2025-01-20T14:45:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    delete:
+      tags:
+        - Shadows
+      summary: Delete shadow
+      description: |
+        Deletes a shadow object. This operation:
+        - Removes the shadow from the identity-service repository
+        - Does NOT delete the actual resource object on the external system
+        - If the shadow is linked to an identity, the link is removed
+        
+        Use this for manual cleanup or when a resource object no longer exists but the shadow persists.
+      operationId: deleteShadow
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Shadow deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  
+  /shadows/{shadowId}/link:
+    parameters:
+      - $ref: '#/components/parameters/ShadowId'
+    
+    post:
+      tags:
+        - Shadow Linking
+      summary: Link shadow to identity
+      description: |
+        Creates a link between a shadow object and a canonical identity.
+        This operation establishes the relationship that the resource object (represented by the shadow)
+        belongs to the specified identity.
+        
+        **Prerequisites:**
+        - Shadow must exist and not already be linked to another identity
+        - Target identity must exist
+        
+        **Effects:**
+        - Sets the shadow's `linkedIdentityId`
+        - Updates the shadow's `synchronizationSituation` to `LINKED`
+        - May trigger outbound provisioning if configured
+      operationId: linkShadowToIdentity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkRequest'
+            example:
+              identityId: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Shadow linked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowResponse'
+        '400':
+          description: Bad request - Shadow already linked or invalid identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "ALREADY_LINKED"
+                message: "Shadow is already linked to identity '123e4567-e89b-12d3-a456-426614174000'"
+                timestamp: "2025-01-20T15:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Shadow or identity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    delete:
+      tags:
+        - Shadow Linking
+      summary: Unlink shadow from identity
+      description: |
+        Removes the link between a shadow object and its associated identity.
+        The shadow and identity objects continue to exist independently after this operation.
+        
+        **Effects:**
+        - Clears the shadow's `linkedIdentityId`
+        - Updates the shadow's `synchronizationSituation` (typically to `UNMATCHED` or `UNLINKED`)
+        - Does NOT delete the shadow or identity
+        - Does NOT affect the actual resource object
+      operationId: unlinkShadowFromIdentity
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Shadow unlinked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowResponse'
+        '400':
+          description: Bad request - Shadow is not linked to any identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "NOT_LINKED"
+                message: "Shadow is not linked to any identity"
+                timestamp: "2025-01-20T15:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  
+  /shadows/search:
+    post:
+      tags:
+        - Shadows
+      summary: Advanced shadow search
+      description: |
+        Performs an advanced search for shadows using a complex query.
+        Supports filtering by multiple criteria, nested conditions, and custom sorting.
+      operationId: searchShadows
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShadowSearchRequest'
+            example:
+              filter:
+                and:
+                  - field: "resourceId"
+                    operator: "="
+                    value: "ldap-prod-001"
+                  - field: "synchronizationSituation"
+                    operator: "in"
+                    value: ["UNMATCHED", "DISPUTED"]
+              page: 0
+              size: 100
+              sort:
+                - field: "createdAt"
+                  direction: "desc"
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  
+  /identities/{identityId}/shadows:
+    parameters:
+      - name: identityId
+        in: path
+        required: true
+        description: The unique identifier of the identity
+        schema:
+          type: string
+          format: uuid
+        example: "123e4567-e89b-12d3-a456-426614174000"
+    
+    get:
+      tags:
+        - Shadows
+      summary: Get shadows for an identity
+      description: |
+        Retrieves all shadow objects linked to a specific identity.
+        Useful for viewing all resource accounts/entitlements associated with a user.
+      operationId: getShadowsByIdentity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: resourceId
+          in: query
+          description: Filter by resource identifier
+          schema:
+            type: string
+        - name: objectClass
+          in: query
+          description: Filter by ConnID object class
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of shadows for the identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  identityId:
+                    type: string
+                    format: uuid
+                  shadows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShadowResponse'
+                  totalCount:
+                    type: integer
+              example:
+                identityId: "123e4567-e89b-12d3-a456-426614174000"
+                totalCount: 2
+                shadows:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    resourceId: "ldap-prod-001"
+                    resourceUid: "uid=jdoe,ou=people,dc=company,dc=com"
+                    objectClass: "__ACCOUNT__"
+                    linkedIdentityId: "123e4567-e89b-12d3-a456-426614174000"
+                    synchronizationSituation: "LINKED"
+                  - id: "660e8400-e29b-41d4-a716-446655440001"
+                    resourceId: "ad-prod-001"
+                    resourceUid: "CN=John Doe,OU=Users,DC=corp,DC=com"
+                    objectClass: "__ACCOUNT__"
+                    linkedIdentityId: "123e4567-e89b-12d3-a456-426614174000"
+                    synchronizationSituation: "LINKED"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Identity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token-based authentication
+  
+  parameters:
+    ShadowId:
+      name: shadowId
+      in: path
+      required: true
+      description: The unique identifier of the shadow object
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+  
+  schemas:
+    ShadowResponse:
+      type: object
+      required:
+        - id
+        - resourceId
+        - resourceUid
+        - objectClass
+        - synchronizationSituation
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the shadow object (internal ID)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        resourceId:
+          type: string
+          description: The identifier of the resource this shadow belongs to
+          example: "ldap-prod-001"
+        resourceUid:
+          type: string
+          description: |
+            The unique identifier of this object on the resource.
+            This is the native identifier from the external system (e.g., LDAP DN, database ID).
+          example: "uid=jdoe,ou=people,dc=company,dc=com"
+        objectClass:
+          type: string
+          description: The ConnID object class of this shadow
+          example: "__ACCOUNT__"
+        kind:
+          type: string
+          enum:
+            - account
+            - entitlement
+            - generic
+          description: |
+            The kind of resource object (MidPoint concept).
+            Defines what the object represents in the identity management context.
+          example: "account"
+        linkedIdentityId:
+          type: string
+          format: uuid
+          description: |
+            The ID of the canonical identity object this shadow is linked to.
+            Null if the shadow is not linked to any identity.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          nullable: true
+        synchronizationSituation:
+          type: string
+          enum:
+            - LINKED
+            - UNLINKED
+            - UNMATCHED
+            - DISPUTED
+            - DELETED
+          description: |
+            The current synchronization situation of this shadow.
+            Represents the relationship state between the shadow and potential identities.
+          example: "LINKED"
+        attributes:
+          type: object
+          additionalProperties: true
+          description: |
+            Key-value map of resource object attributes.
+            These are populated temporarily during reconciliation/provisioning operations.
+            May be empty when shadow is at rest between operations.
+          example:
+            uid: "jdoe"
+            mail: "john.doe@company.com"
+            cn: "John Doe"
+            employeeNumber: "12345"
+        metadata:
+          $ref: '#/components/schemas/ShadowMetadata'
+    
+    ShadowMetadata:
+      type: object
+      required:
+        - createdAt
+        - updatedAt
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the shadow was first created
+          example: "2025-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the shadow was last updated
+          example: "2025-01-20T14:45:00Z"
+        lastSynchronizedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last synchronization operation
+          example: "2025-01-20T14:45:00Z"
+          nullable: true
+        lastProvisionedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last provisioning operation
+          example: "2025-01-19T09:15:00Z"
+          nullable: true
+    
+    ShadowListResponse:
+      type: object
+      required:
+        - shadows
+        - pagination
+      properties:
+        shadows:
+          type: array
+          description: List of shadow objects for the current page
+          items:
+            $ref: '#/components/schemas/ShadowResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+    
+    PaginationMetadata:
+      type: object
+      required:
+        - page
+        - size
+        - totalElements
+        - totalPages
+        - hasNext
+        - hasPrevious
+      properties:
+        page:
+          type: integer
+          description: Current page number (0-based)
+          example: 0
+        size:
+          type: integer
+          description: Number of items per page
+          example: 50
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of items matching the query
+          example: 237
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 5
+        hasNext:
+          type: boolean
+          description: Whether there is a next page available
+          example: true
+        hasPrevious:
+          type: boolean
+          description: Whether there is a previous page available
+          example: false
+    
+    LinkRequest:
+      type: object
+      required:
+        - identityId
+      properties:
+        identityId:
+          type: string
+          format: uuid
+          description: The ID of the identity to link this shadow to
+          example: "123e4567-e89b-12d3-a456-426614174000"
+    
+    ShadowSearchRequest:
+      type: object
+      properties:
+        filter:
+          $ref: '#/components/schemas/SearchFilter'
+        page:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Page number (0-based)
+        size:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 50
+          description: Page size
+        sort:
+          type: array
+          description: List of sort criteria
+          items:
+            $ref: '#/components/schemas/SortCriteria'
+    
+    SearchFilter:
+      type: object
+      description: |
+        Filter for searching shadows. Supports simple field comparisons and complex logical operations.
+      properties:
+        field:
+          type: string
+          description: The field name to filter on (for simple comparisons)
+          example: "resourceId"
+        operator:
+          type: string
+          enum:
+            - "="
+            - "!="
+            - "in"
+            - "not in"
+            - "is null"
+            - "is not null"
+            - "contains"
+          description: The comparison operator
+          example: "="
+        value:
+          description: The value to compare against (can be a single value or array for 'in' operators)
+          example: "ldap-prod-001"
+        and:
+          type: array
+          description: Logical AND of multiple filters
+          items:
+            $ref: '#/components/schemas/SearchFilter'
+        or:
+          type: array
+          description: Logical OR of multiple filters
+          items:
+            $ref: '#/components/schemas/SearchFilter'
+      example:
+        and:
+          - field: "resourceId"
+            operator: "="
+            value: "ldap-prod-001"
+          - field: "synchronizationSituation"
+            operator: "in"
+            value: ["UNMATCHED", "DISPUTED"]
+    
+    SortCriteria:
+      type: object
+      required:
+        - field
+      properties:
+        field:
+          type: string
+          description: The field name to sort by
+          example: "createdAt"
+        direction:
+          type: string
+          enum:
+            - asc
+            - desc
+          default: asc
+          description: Sort direction
+          example: "desc"
+    
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error code or type
+          example: "NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Shadow not found with ID '550e8400-e29b-41d4-a716-446655440000'"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred
+          example: "2025-01-20T15:30:00Z"
+        path:
+          type: string
+          description: API path where the error occurred
+          example: "/api/v1/shadows/550e8400-e29b-41d4-a716-446655440000"
+  
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "VALIDATION_ERROR"
+            message: "Invalid search filter: field 'invalidField' is not supported"
+            timestamp: "2025-01-20T15:30:00Z"
+    
+    Unauthorized:
+      description: Unauthorized - Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "UNAUTHORIZED"
+            message: "Valid JWT token is required"
+            timestamp: "2025-01-20T15:30:00Z"
+    
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "FORBIDDEN"
+            message: "User does not have permission to manage shadows"
+            timestamp: "2025-01-20T15:30:00Z"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "NOT_FOUND"
+            message: "Shadow not found with ID '550e8400-e29b-41d4-a716-446655440000'"
+            timestamp: "2025-01-20T15:30:00Z"
+    
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "INTERNAL_SERVER_ERROR"
+            message: "An unexpected error occurred while processing the request"
+            timestamp: "2025-01-20T15:30:00Z"
+
+security:
+  - bearerAuth: []

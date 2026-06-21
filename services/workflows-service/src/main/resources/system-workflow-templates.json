@@ -1,0 +1,322 @@
+{
+  "templates": [
+    {
+      "name": "User Role Assignment",
+      "description": "Assign role to users with approval workflow",
+      "category": "Role Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Role management system", "Approval service"],
+      "tags": ["role", "assignment", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier to assign",
+        "userIds": "List of user IDs to assign the role to",
+        "sendNotificationOnAssignment": "Whether to send notification",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 250, "y": 50}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 295, "y": 798}},
+        {"id": "node-1768264795828", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "notifications": false}, "type": "approval.multi", "position": {"x": 261, "y": 234}},
+        {"id": "node-1768268772843", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/user-roles/assign", "body": {"roleId": "{{roleId}}", "userIds": "{{userIds}}", "sendNotificationOnAssignment": "{{sendNotificationOnAssignment}}"}, "method": "POST", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 60000, "auditLog": true, "template": "action.user.role.assign", "slaTimeout": 24, "notifications": false, "contextMappings": {"userIds": "approvedUserIds"}}, "type": "action.http", "position": {"x": 90, "y": 566}},
+        {"id": "node-1768268897713", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "approvedUserIds", "value": "0", "auditLog": true, "operator": "isNotEmpty", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 267, "y": 396}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1768264795828", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1768264795828"},
+        {"id": "xy-edge__node-1768268772843-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1768268772843", "target": "end-node"},
+        {"id": "xy-edge__node-1768264795828-node-1768268897713", "data": {"ui": {"type": "custom"}}, "source": "node-1768264795828", "target": "node-1768268897713"},
+        {"id": "xy-edge__node-1768268897713true-node-1768268772843", "data": {"ui": {"type": "custom"}}, "source": "node-1768268897713", "target": "node-1768268772843", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1768268897713false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1768268897713", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Bulk Permission Assignment",
+      "description": "Bulk assign permissions to a role with approval",
+      "category": "Permission Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Permission management system", "Approval service"],
+      "tags": ["permission", "bulk", "assignment", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier",
+        "assignments": "List of permission assignments",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 224, "y": -168}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 178, "y": 537}},
+        {"id": "node-1767929450494", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "notifications": false}, "type": "approval.multi", "position": {"x": 212, "y": 14}},
+        {"id": "node-1767929457213", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "decision", "value": "APPROVED", "auditLog": true, "operator": "equals", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 202, "y": 168}},
+        {"id": "node-1767929459743", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/bulk", "body": {"assignments": "{{assignments}}"}, "method": "POST", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 60000, "auditLog": true, "template": "action.permission.bulk.assign", "slaTimeout": 24, "notifications": false}, "type": "action.http", "position": {"x": -18, "y": 378}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1767929450494", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1767929450494"},
+        {"id": "xy-edge__node-1767929450494-node-1767929457213", "data": {"ui": {"type": "custom"}}, "source": "node-1767929450494", "target": "node-1767929457213"},
+        {"id": "xy-edge__node-1767929457213true-node-1767929459743", "data": {"ui": {"type": "custom"}}, "source": "node-1767929457213", "target": "node-1767929459743", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1767929459743-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767929459743", "target": "end-node"},
+        {"id": "xy-edge__node-1767929457213false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767929457213", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Bulk Permission Revocation",
+      "description": "Bulk revoke permissions from a role with approval",
+      "category": "Permission Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Permission management system", "Approval service"],
+      "tags": ["permission", "bulk", "revoke", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier",
+        "actionIds": "List of action IDs to revoke",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 342, "y": -124}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 378, "y": 524}},
+        {"id": "node-1767930431090", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "notifications": false}, "type": "approval.multi", "position": {"x": 375, "y": 36}},
+        {"id": "node-1767930435320", "data": {"ui": {"icon": {}, "risk": "high", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/bulk-revoke", "body": {"actionIds": "{{actionIds}}"}, "method": "POST", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 60000, "auditLog": true, "template": "action.permission.bulk.revoke", "slaTimeout": 24, "notifications": false}, "type": "action.http", "position": {"x": 117, "y": 359}},
+        {"id": "node-1767930440677", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "decision", "value": "APPROVED", "auditLog": true, "operator": "equals", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 333, "y": 198}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1767930431090", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1767930431090"},
+        {"id": "xy-edge__node-1767930431090-node-1767930440677", "data": {"ui": {"type": "custom"}}, "source": "node-1767930431090", "target": "node-1767930440677"},
+        {"id": "xy-edge__node-1767930440677true-node-1767930435320", "data": {"ui": {"type": "custom"}}, "source": "node-1767930440677", "target": "node-1767930435320", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1767930435320-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767930435320", "target": "end-node"},
+        {"id": "xy-edge__node-1767930440677false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767930440677", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Role Creation Request",
+      "description": "Create a new role with approval workflow",
+      "category": "Role Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Role management system", "Approval service"],
+      "tags": ["role", "creation", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleName": "Name of the role to create",
+        "description": "Role description",
+        "roleType": "Type of role",
+        "riskLevel": "Risk level of the role",
+        "ownerIds": "List of role owner IDs",
+        "tags": "Role tags",
+        "businessJustification": "Business justification for role creation",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 250, "y": 50}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 318, "y": 877}},
+        {"id": "node-1766518630353", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "approverType": "role_owner", "notifications": false}, "type": "approval.multi", "position": {"x": 269, "y": 292}},
+        {"id": "node-1766518643568", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "approvedOwnerIds", "value": "0", "auditLog": true, "operator": "isNotEmpty", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 375, "y": 475}},
+        {"id": "node-1766518663897", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/roles", "body": {"tags": "{{tags}}", "ownerIds": "{{ownerIds}}", "roleName": "{{roleName}}", "roleType": "{{roleType}}", "riskLevel": "{{riskLevel}}", "description": "{{description}}", "submitForApproval": false, "businessJustification": "{{businessJustification}}"}, "method": "POST", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}"}, "retries": 3, "timeout": 30000, "auditLog": true, "template": "action.role.create", "slaTimeout": 24, "notifications": false, "contextMappings": {"ownerIds": "approvedOwnerIds"}}, "type": "action.http", "position": {"x": 166, "y": 702}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1766518630353", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1766518630353"},
+        {"id": "xy-edge__node-1766518630353-node-1766518643568", "data": {"ui": {"type": "custom"}}, "source": "node-1766518630353", "target": "node-1766518643568"},
+        {"id": "xy-edge__node-1766518643568true-node-1766518663897", "data": {"ui": {"type": "custom"}}, "source": "node-1766518643568", "target": "node-1766518663897", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1766518663897-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1766518663897", "target": "end-node"},
+        {"id": "xy-edge__node-1766518643568false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1766518643568", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Permission Grant Request",
+      "description": "Grant permission to a role with approval",
+      "category": "Permission Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Permission management system", "Approval service"],
+      "tags": ["permission", "grant", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier",
+        "actionId": "Action/permission identifier to grant",
+        "justification": "Business justification",
+        "conditionScript": "Optional condition script",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 257, "y": -304}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 248, "y": 556}},
+        {"id": "node-1767923891893", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "approverType": "role_owner", "notifications": false}, "type": "approval.multi", "position": {"x": 244, "y": -17}},
+        {"id": "node-1767923898339", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "decision", "value": "APPROVED", "auditLog": true, "operator": "equals", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 214, "y": 209}},
+        {"id": "node-1767923899829", "data": {"ui": {"icon": {}, "risk": "high", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/assign", "body": {"actionId": "{{actionId}}", "justification": "{{justification}}", "conditionScript": "{{conditionScript}}"}, "method": "POST", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 30000, "auditLog": true, "template": "action.permission.assign", "slaTimeout": 24, "notifications": false}, "type": "action.http", "position": {"x": 99, "y": 350}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1767923891893", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1767923891893"},
+        {"id": "xy-edge__node-1767923891893-node-1767923898339", "data": {"ui": {"type": "custom"}}, "source": "node-1767923891893", "target": "node-1767923898339"},
+        {"id": "xy-edge__node-1767923898339true-node-1767923899829", "data": {"ui": {"type": "custom"}}, "source": "node-1767923898339", "target": "node-1767923899829", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1767923899829-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767923899829", "target": "end-node"},
+        {"id": "xy-edge__node-1767923898339false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767923898339", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Permission Revocation Request",
+      "description": "Revoke permission from a role with approval",
+      "category": "Permission Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Permission management system", "Approval service"],
+      "tags": ["permission", "revoke", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier",
+        "actionId": "Action/permission identifier to revoke",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 229, "y": -48}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 232, "y": 606}},
+        {"id": "node-1767924363435", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "approverType": "role_owner", "notifications": false}, "type": "approval.multi", "position": {"x": 114, "y": 117}},
+        {"id": "node-1767924369993", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/delete/{{actionId}}", "body": "", "method": "DELETE", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 30000, "auditLog": true, "template": "action.permission.revoke", "slaTimeout": 24, "notifications": false}, "type": "action.http", "position": {"x": -22, "y": 426}},
+        {"id": "node-1767924384105", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "decision", "value": "APPROVED", "auditLog": true, "operator": "equals", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 164, "y": 267}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1767924363435", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1767924363435"},
+        {"id": "xy-edge__node-1767924384105true-node-1767924369993", "data": {"ui": {"type": "custom"}}, "source": "node-1767924384105", "target": "node-1767924369993", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1767924363435-node-1767924384105", "data": {"ui": {"type": "custom"}}, "source": "node-1767924363435", "target": "node-1767924384105"},
+        {"id": "xy-edge__node-1767924369993-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767924369993", "target": "end-node"},
+        {"id": "xy-edge__node-1767924384105false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1767924384105", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "User Role Revocation",
+      "description": "Revoke role from users with approval workflow",
+      "category": "Role Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Role management system", "Approval service"],
+      "tags": ["role", "revoke", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier to revoke",
+        "userIds": "List of user IDs to revoke the role from",
+        "sendNotificationOnAssignment": "Whether to send notification",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 246, "y": -42}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 233, "y": 688}},
+        {"id": "node-1768270593166", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "notifications": false}, "type": "approval.multi", "position": {"x": 259, "y": 129}},
+        {"id": "node-1768270595324", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "decision", "value": "APPROVED", "auditLog": true, "operator": "equals", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 219, "y": 332}},
+        {"id": "node-1768270597277", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/user-roles/revoke", "body": {"roleId": "{{roleId}}", "userIds": "{{userIds}}", "sendNotificationOnAssignment": "{{sendNotificationOnAssignment}}"}, "method": "DELETE", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 60000, "auditLog": true, "template": "action.user.role.revoke", "slaTimeout": 24, "notifications": false}, "type": "action.http", "position": {"x": 47, "y": 517}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1768270593166", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1768270593166"},
+        {"id": "xy-edge__node-1768270593166-node-1768270595324", "data": {"ui": {"type": "custom"}}, "source": "node-1768270593166", "target": "node-1768270595324"},
+        {"id": "xy-edge__node-1768270595324true-node-1768270597277", "data": {"ui": {"type": "custom"}}, "source": "node-1768270595324", "target": "node-1768270597277", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1768270597277-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1768270597277", "target": "end-node"},
+        {"id": "xy-edge__node-1768270595324false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1768270595324", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Role Deletion Request",
+      "description": "Delete role after approval",
+      "category": "Role Management",
+      "framework": "RBAC",
+      "complexity": "MEDIUM",
+      "steps": 5,
+      "estimatedTime": "30-60 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001"],
+      "prerequisites": ["Role management system", "Approval service"],
+      "tags": ["role", "deletion", "approval"],
+      "version": "1.0",
+      "variables": {
+        "roleId": "Role identifier to delete",
+        "tenantId": "Tenant identifier"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 250, "y": 50}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 371, "y": 766}},
+        {"id": "node-1766685393269", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "notifications": false}, "type": "approval.multi", "position": {"x": 258, "y": 292}},
+        {"id": "node-1766685401059", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}", "body": "", "method": "DELETE", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json"}, "retries": 3, "timeout": 30000, "auditLog": true, "template": "action.role.delete", "slaTimeout": 24, "notifications": false}, "type": "action.http", "position": {"x": 45, "y": 629}},
+        {"id": "node-1766699852302", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "decision", "value": "APPROVED", "auditLog": true, "operator": "equals", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 345, "y": 450}}
+      ],
+      "edges": [
+        {"id": "xy-edge__start-node-node-1766685393269", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1766685393269"},
+        {"id": "xy-edge__node-1766685401059-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1766685401059", "target": "end-node"},
+        {"id": "xy-edge__node-1766685393269-node-1766699852302", "data": {"ui": {"type": "custom"}}, "source": "node-1766685393269", "target": "node-1766699852302"},
+        {"id": "xy-edge__node-1766699852302true-node-1766685401059", "data": {"ui": {"type": "custom"}}, "source": "node-1766699852302", "target": "node-1766685401059", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1766699852302false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1766699852302", "target": "end-node", "sourceHandle": "false"}
+      ]
+    },
+    {
+      "name": "Access Portal Role Assignment",
+      "description": "Assign role to users via Access Portal with manager-based per-user approval workflow. Each user's manager must approve before the role is assigned.",
+      "category": "Access Management",
+      "framework": "RBAC",
+      "complexity": "COMPLEX",
+      "steps": 7,
+      "estimatedTime": "60-120 minutes",
+      "complianceFrameworks": ["SOC2", "ISO27001", "GDPR"],
+      "prerequisites": ["Access Portal", "Role management system", "Approval service"],
+      "tags": ["access-portal", "role", "assignment", "approval", "manager", "per-user"],
+      "version": "2.0",
+      "variables": {
+        "managers": "List of user-manager pairs with userId and managerId for per-user approval",
+        "roleId": "Role identifier to assign",
+        "approvedUserIds": "List of user IDs approved by their managers",
+        "sendNotificationOnAssignment": "Whether to send notification on assignment",
+        "tenantId": "Tenant identifier",
+        "jwtToken": "Authentication token",
+        "workflowExecutionId": "Workflow execution ID"
+      },
+      "nodes": [
+        {"id": "start-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "Start", "stepType": "trigger.start", "description": ""}, "auditLog": true, "slaTimeout": 24, "notifications": true}, "type": "trigger.start", "position": {"x": 518, "y": -46}},
+        {"id": "end-node", "data": {"ui": {"icon": {}, "risk": "low", "label": "End", "stepType": "trigger.end", "description": "Workflow completion point"}, "auditLog": true, "slaTimeout": 0, "notifications": false}, "type": "trigger.end", "position": {"x": 466, "y": 1039}},
+        {"id": "node-1768264795828", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "approverType": "role_owner", "notifications": false, "approverSource": "role_owner"}, "type": "approval.multi", "position": {"x": 284, "y": 516}},
+        {"id": "node-1768268772843", "data": {"ui": {"icon": {}, "risk": "medium", "label": "HTTP Request", "stepType": "action.http"}, "url": "http://application-permissions-service:8095/api/v1/user-roles/assign", "body": {"roleId": "{{roleId}}", "userIds": "{{userIds}}", "sendNotificationOnAssignment": "{{sendNotificationOnAssignment}}"}, "method": "POST", "headers": {"X-Tenant-ID": "{{tenantId}}", "Content-Type": "application/json", "Authorization": "Bearer {{jwtToken}}", "X-Workflow-Execution-Id": "{{workflowExecutionId}}"}, "retries": 3, "timeout": 60000, "auditLog": true, "template": "action.user.role.assign", "slaTimeout": 24, "notifications": false, "contextMappings": {"userIds": "approvedUserIds"}}, "type": "action.http", "position": {"x": 153, "y": 913}},
+        {"id": "node-1768268897713", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "approvedUserIds", "value": "0", "auditLog": true, "operator": "isNotEmpty", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 190, "y": 697}},
+        {"id": "node-1769833603950", "data": {"ui": {"icon": {}, "risk": "medium", "label": "If/Else Branch", "stepType": "condition.if"}, "field": "approvedUserIds", "value": "0", "auditLog": true, "operator": "isNotEmpty", "slaTimeout": 24, "notifications": false}, "type": "condition.if", "position": {"x": 478, "y": 372}},
+        {"id": "node-1770075903558", "data": {"ui": {"icon": {}, "risk": "high", "label": "Multiple Approvers", "stepType": "approval.multi"}, "auditLog": true, "slaTimeout": 24, "notifications": false, "approverSource": "user_manager_pairs", "structuredApproversKey": "managers"}, "type": "approval.multi", "position": {"x": 513, "y": 140}}
+      ],
+      "edges": [
+        {"id": "xy-edge__node-1768268772843-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1768268772843", "target": "end-node"},
+        {"id": "xy-edge__node-1768264795828-node-1768268897713", "data": {"ui": {"type": "custom"}}, "source": "node-1768264795828", "target": "node-1768268897713"},
+        {"id": "xy-edge__node-1768268897713true-node-1768268772843", "data": {"ui": {"type": "custom"}}, "source": "node-1768268897713", "target": "node-1768268772843", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1768268897713false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1768268897713", "target": "end-node", "sourceHandle": "false"},
+        {"id": "xy-edge__node-1769833603950true-node-1768264795828", "data": {"ui": {"type": "custom"}}, "source": "node-1769833603950", "target": "node-1768264795828", "sourceHandle": "true"},
+        {"id": "xy-edge__node-1769833603950false-end-node", "data": {"ui": {"type": "custom"}}, "source": "node-1769833603950", "target": "end-node", "sourceHandle": "false"},
+        {"id": "xy-edge__node-1770075903558-node-1769833603950", "data": {"ui": {"type": "custom"}}, "source": "node-1770075903558", "target": "node-1769833603950"},
+        {"id": "xy-edge__start-node-node-1770075903558", "data": {"ui": {"type": "custom"}}, "source": "start-node", "target": "node-1770075903558"}
+      ]
+    }
+  ]
+}

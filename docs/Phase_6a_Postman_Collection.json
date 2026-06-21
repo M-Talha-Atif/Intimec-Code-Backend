@@ -1,0 +1,260 @@
+{
+  "info": {
+    "name": "Phase 6a - Async Workflow Testing",
+    "description": "Test collection for Phase 6a async execution and pause/resume functionality",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Simple Workflow (No Approval)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test Async Execution\",\n  \"description\": \"Simple workflow to test async execution\",\n  \"nodes\": [\n    {\n      \"id\": \"start-1\",\n      \"type\": \"trigger.start\",\n      \"data\": { \"label\": \"Start\" }\n    },\n    {\n      \"id\": \"action-1\",\n      \"type\": \"action.log\",\n      \"data\": { \n        \"label\": \"Log Action\",\n        \"message\": \"Processing...\"\n      }\n    },\n    {\n      \"id\": \"end-1\",\n      \"type\": \"trigger.end\",\n      \"data\": { \"label\": \"End\" }\n    }\n  ],\n  \"edges\": [\n    { \"source\": \"start-1\", \"target\": \"action-1\" },\n    { \"source\": \"action-1\", \"target\": \"end-1\" }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8098/api/workflows",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Execute Simple Workflow (Async Test)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"executionContext\": {\n    \"userId\": \"test-user-123\",\n    \"testMode\": true\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/{{workflowId}}/executions",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "{{workflowId}}", "executions"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Execution Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/executions/{{executionId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "executions", "{{executionId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Create Approval Workflow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test Approval Workflow\",\n  \"description\": \"Workflow with approval to test pause/resume\",\n  \"nodes\": [\n    {\n      \"id\": \"start-1\",\n      \"type\": \"trigger.start\",\n      \"data\": { \"label\": \"Start\" }\n    },\n    {\n      \"id\": \"action-1\",\n      \"type\": \"action.log\",\n      \"data\": { \n        \"label\": \"Pre-Approval Action\",\n        \"message\": \"Before approval...\"\n      }\n    },\n    {\n      \"id\": \"approval-1\",\n      \"type\": \"approval.single\",\n      \"data\": { \n        \"label\": \"Manager Approval\",\n        \"approverId\": \"{{approverUserId}}\",\n        \"timeoutMinutes\": 1440\n      }\n    },\n    {\n      \"id\": \"action-2\",\n      \"type\": \"action.log\",\n      \"data\": { \n        \"label\": \"Post-Approval Action\",\n        \"message\": \"After approval...\"\n      }\n    },\n    {\n      \"id\": \"end-1\",\n      \"type\": \"trigger.end\",\n      \"data\": { \"label\": \"End\" }\n    }\n  ],\n  \"edges\": [\n    { \"source\": \"start-1\", \"target\": \"action-1\" },\n    { \"source\": \"action-1\", \"target\": \"approval-1\" },\n    { \"source\": \"approval-1\", \"target\": \"action-2\" },\n    { \"source\": \"action-2\", \"target\": \"end-1\" }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8098/api/workflows",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Execute Approval Workflow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"executionContext\": {\n    \"userId\": \"test-user-123\",\n    \"requestType\": \"access_request\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/{{approvalWorkflowId}}/executions",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "{{approvalWorkflowId}}", "executions"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get Approvals for Execution",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/executions/{{executionId}}/approvals",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "executions", "{{executionId}}", "approvals"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Approve Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"approverId\": \"{{approverUserId}}\",\n  \"comments\": \"Approved for testing Phase 6a\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/approvals/{{approvalId}}/approve",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "approvals", "{{approvalId}}", "approve"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. Reject Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"approverId\": \"{{approverUserId}}\",\n  \"comments\": \"Rejected for testing purposes\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/approvals/{{approvalId}}/reject",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "approvals", "{{approvalId}}", "reject"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9. List All Workflows",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8098/api/workflows?page=0&size=20",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "20"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10. List All Executions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8098/api/workflows/executions?page=0&size=20",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8098",
+          "path": ["api", "workflows", "executions"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "20"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "workflowId",
+      "value": "PASTE_WORKFLOW_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "approvalWorkflowId",
+      "value": "PASTE_APPROVAL_WORKFLOW_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "executionId",
+      "value": "PASTE_EXECUTION_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "approvalId",
+      "value": "PASTE_APPROVAL_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "approverUserId",
+      "value": "PASTE_REAL_USER_UUID_HERE",
+      "type": "string"
+    }
+  ]
+}

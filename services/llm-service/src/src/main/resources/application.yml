@@ -1,0 +1,97 @@
+server:
+  port: 8097
+
+spring:
+  application:
+    name: llm-service
+  
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:llmdb}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+  
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: ${SPRING_HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}
+  
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:false}
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Fix static resource handling
+  web:
+    resources:
+      add-mappings: false
+
+# LLM Provider configurations (URLs, timeouts, etc.)
+llm:
+  providers:
+    openai:
+      base-url: https://api.openai.com/v1
+      timeout: 30s
+    anthropic:
+      base-url: https://api.anthropic.com/v1
+      timeout: 30s
+    google:
+      base-url: https://generativelanguage.googleapis.com/v1
+      timeout: 30s
+    deepseek:
+      base-url: https://api.deepseek.com
+      timeout: 30s
+    mistral:
+      base-url: https://api.mistral.ai
+      timeout: 30s
+      
+
+  
+  # Default settings
+  defaults:
+    max-tokens: 1000
+    temperature: 0.7
+    timeout: 30s
+
+# Provider configurations for individual clients
+providers:
+  deepseek:
+    base-url: https://api.deepseek.com
+  mistral:
+    base-url: https://api.mistral.ai
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configuration
+logging:
+  level:
+    com.aidentx.llmservice: INFO
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# gRPC client configuration for configuration-service    
+grpc:
+  client:
+    configuration-service:
+      address: 'static://${GRPC_CONFIGURATION_SERVICE_HOST:localhost}:${GRPC_CONFIGURATION_SERVICE_PORT:9091}'
+      negotiation-type: plaintext
+      keep-alive-time: 30s
+      keep-alive-timeout: 5s
+      keep-alive-without-calls: true
+      max-inbound-message-size: 4MB
+      max-inbound-metadata-size: 8KB

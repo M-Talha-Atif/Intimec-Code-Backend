@@ -1,0 +1,66 @@
+{
+    "ldap": {
+        "enabled": true,
+        "name": "Local Active Directory",
+        "url": "ldap://localhost:389",
+        "baseDn": "DC=company,DC=com",
+        "userDnPattern": "CN={0},CN=Users,DC=company,DC=com",
+        "userSearchBase": "CN=Users,DC=company,DC=com",
+        "userSearchFilter": "(sAMAccountName={0})",
+        "groupSearchBase": "CN=Users,DC=company,DC=com",
+        "groupSearchFilter": "(member={0})",
+        "ldapUser": "Administrator@company.com",
+        "ldapUserPassword": "lol123a@",
+        "userAttributes": {
+            "email": "mail",
+            "firstName": "givenName",
+            "lastName": "sn",
+            "displayName": "displayName",
+            "username": "sAMAccountName",
+            "groups": "memberOf"
+        }
+    },
+    "saml": {
+        "enabled": true,
+        "name": "Microsoft Entra SAML IdP",
+        "entityId": "http://localhost:8090/auth-service",
+        "assertionConsumerServiceUrl": "http://localhost:8090/login/saml2/sso/saml-provider",
+        "singleLogoutServiceUrl": "http://localhost:8090/api/v1/auth/saml/logout",
+        "idpEntityId": "https://sts.windows.net/63dcdf9d-8f17-4ffa-8cf3-8493d79c6cf2/",
+        "idpSsoUrl": "https://login.microsoftonline.com/63dcdf9d-8f17-4ffa-8cf3-8493d79c6cf2/saml2",
+        "metadataUrl": "https://login.microsoftonline.com/63dcdf9d-8f17-4ffa-8cf3-8493d79c6cf2/federationmetadata/2007-06/federationmetadata.xml",
+        "keyStoreLocation": "classpath:certificates/saml-keystore.jks",
+        "keyStorePassword": "changeit",
+        "keyAlias": "saml-signing",
+        "attributeMapping": {
+            "email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            "firstName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+            "lastName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+            "displayName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+        }
+    },
+    "oauth2": {
+        "enabled": true,
+        "name": "Google OAuth2",
+        "providerId": "google",
+        "clientId": "218184317376-1g802o6vunc4rpct0amvq4b2ngddq1fh.apps.googleusercontent.com",
+        "clientSecret": "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",
+        "authorizationUri": "https://accounts.google.com/o/oauth2/v2/auth",
+        "tokenUri": "https://oauth2.googleapis.com/token",
+        "userInfoUri": "https://www.googleapis.com/oauth2/v2/userinfo",
+        "jwkSetUri": "https://www.googleapis.com/oauth2/v3/certs",
+        "redirectUri": "http://localhost:8090/login/oauth2/code/google",
+        "scopes": [
+            "openid",
+            "profile",
+            "email"
+        ],
+        "userNameAttribute": "email",
+        "attributeMapping": {
+            "email": "email",
+            "firstName": "given_name",
+            "lastName": "family_name",
+            "displayName": "name"
+        }
+    }
+}

@@ -1,0 +1,87 @@
+networks:
+  iam-platform-network:
+    driver: bridge
+
+services:
+  postgres:
+    container_name: pg-dev
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 0;ZA9V{2`2Hu
+      POSTGRES_DB: intimec
+    ports:
+      - "5432:5432"
+    networks:
+      - iam-platform-network
+
+  # needed for kafka
+  zookeeper:
+    container_name: zookeeper-dev
+    image: confluentinc/cp-zookeeper:7.3.2
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    networks:
+      - iam-platform-network
+
+  kafka:
+    container_name: kafka-dev
+    image: confluentinc/cp-kafka:7.3.2
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-dev:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-dev:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+    networks:
+      - iam-platform-network
+
+  dgraph:
+    container_name: dgraph-dev
+    image: dgraph/standalone:latest
+    ports:
+      - "8080:8080"
+      - "9080:9080"
+    networks:
+      - iam-platform-network
+
+  identity-service:
+    image: identity-service:latest
+    container_name: identity_service
+    ports:
+      - "8094:8094" # REST Port
+      - "9096:9096" # gRPC Port
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/intimec
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - OPENSEARCH_URL=http://opensearch:9200
+      - CORE_GRPC_ADDRESS=static://core-service:9095
+    depends_on:
+      - postgres
+      - kafka
+    networks:
+      - iam-platform-network
+
+  core-service:
+    image: core-service:latest
+    container_name: core_service
+    ports:
+      - "8091:8091" # REST Port
+      - "9095:9095" # gRPC Port
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/intimec
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - OPENSEARCH_URL=http://opensearch:9200
+      - IDENTITIES_GRPC_ADDRESS=static://identity-service:9096
+      - CONNECTOR_GRPC_ADDRESS=static://connector-runtime-service:9094
+    depends_on:
+      - postgres
+      - kafka
+      - identity-service
+    networks:
+      - iam-platform-network

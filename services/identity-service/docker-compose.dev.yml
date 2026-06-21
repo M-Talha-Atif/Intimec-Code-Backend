@@ -1,0 +1,44 @@
+#runs kafka, postgres and dgraph for dev testing the iam in isolation
+
+services:
+  pg-dev:
+    container_name: pg-dev
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 0;ZA9V{2`2Hu
+      POSTGRES_DB: intimec
+    ports:
+      - "5432:5432"
+
+  # needed for kafka
+  zookeeper-dev:
+    container_name: zookeeper-dev
+    image: confluentinc/cp-zookeeper:7.3.2
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+  kafka-dev:
+    container_name: kafka-dev
+    image: confluentinc/cp-kafka:7.3.2
+    depends_on:
+      - zookeeper-dev
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-dev:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-dev:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+
+  dgraph-dev:
+    container_name: dgraph-dev
+    image: dgraph/standalone:latest
+    ports:
+      - "8080:8080"
+      - "9080:9080"
+
+networks:
+  iam-dev-net:

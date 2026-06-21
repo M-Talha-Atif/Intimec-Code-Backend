@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.identity_schema;
+
+import "google/protobuf/wrappers.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.identity_schema";
+option java_outer_classname = "IdentitySchemaServiceProto";
+
+// The gRPC service for fetching authoritative schema definitions for any object
+// in the IGA platform.
+service IdentitySchemaService {
+  // Retrieves the full definition of a single schema by its UUID.
+  rpc GetSchemaByType(GetSchemaByIdentityType) returns (SchemaDefinition);
+
+  // Finds a schema based on the resource it's linked to and the object class
+  // name. This is the primary method used by other services during
+  // orchestration.
+  rpc FindSchemaByResource(FindSchemaByResourceRequest)
+      returns (SchemaDefinition);
+}
+
+// ===================================================================
+//  Request/Response Messages
+// ===================================================================
+
+message GetSchemaByIdentityType {
+  string identity_type = 1;
+  string tenant_id = 2;
+}
+
+message FindSchemaByResourceRequest {
+  string resource_id = 1; // The UUID of the resource configuration as a string.
+  string source_object_class_name = 2; // e.g., "__ACCOUNT__", "groupOfNames"
+  string tenant_id = 3;
+}
+
+// Represents the complete definition of a schema, including its fields.
+message SchemaDefinition {
+  string id = 1;
+  string schema_name = 2;
+  string schema_code = 3;
+  string tenant_id = 4;
+  string schema_type = 5; // e.g., "CANONICAL_IDENTITY", "RESOURCE_ACCOUNT"
+  repeated SchemaField fields = 6;
+}
+
+// Represents a single, comprehensive field within a schema.
+// This message contains all metadata needed for validation, UI rendering, and
+// governance.
+message SchemaField {
+  string id = 1;         // The UUID of the field itself.
+  string system_key = 2; // The programmatic name of the field (e.g., "email").
+  string display_name = 3; // The human-friendly name (e.g., "Email Address").
+  string data_type = 4;    // The platform data type (e.g., "STRING", "NUMBER").
+  string description = 5;  // Help text for UI tooltips.
+
+  // --- Core Classification & Behavior ---
+  bool is_core_field =
+      6;                // true -> coreAttributes; false -> extendedAttributes.
+  bool is_required = 7; // Must a value be provided?
+  bool is_unique = 8;   // Must the value be unique within the tenant/schema?
+  bool is_multivalued = 9; // Can this field hold an array of values?
+  bool is_writable = 10;   // Can this field be modified after creation?
+
+  // --- Governance & Synchronization ---
+  bool sync_from_source =
+      11; // Should this field's value be updated during sync?
+  // Using StringValue wrapper to allow for nullable/optional fields.
+  google.protobuf.StringValue risk_level = 12; // e.g., "Low", "Medium", "High".
+  google.protobuf.StringValue source_system =
+      13; // The name of the system it originates from.
+  repeated string compliance_tags = 14; // e.g., "PII", "GDPR".
+
+  // --- UI & Defaulting ---
+  google.protobuf.StringValue default_value =
+      15; // A default value for new objects.
+  google.protobuf.StringValue usage_context =
+      16;                   // Hint for where this field is used.
+  int32 display_order = 17; // Order for rendering in forms.
+
+  // --- Internationalization (i18n) Labels ---
+  // These allow a UI to display the field name in different languages.
+  google.protobuf.StringValue label_en = 18; // English
+  google.protobuf.StringValue label_fr = 19; // French
+  google.protobuf.StringValue label_es = 20; // Spanish
+  google.protobuf.StringValue label_de = 21; // German
+  google.protobuf.StringValue label_ja = 22; // Japanese
+  google.protobuf.StringValue label_pt = 23; // Portuguese
+  google.protobuf.StringValue label_it = 24; // Italian
+  google.protobuf.StringValue label_zh = 25; // Chinese
+}

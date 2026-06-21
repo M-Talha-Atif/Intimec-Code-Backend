@@ -1,0 +1,86 @@
+# Dynamic Rule Scheduler Configuration
+# Production-ready configuration for multi-threaded scheduled dynamic rule execution
+
+# Thread Pool Configuration
+dynamic-rules:
+  scheduler:
+    # Thread pool size for parallel execution (default: 10)
+    # Recommended: 2-4 threads per CPU core for optimal performance
+    thread-pool-size: 10
+    
+    # Maximum consecutive failures before circuit breaker opens (default: 5)
+    max-consecutive-failures: 5
+    
+    # Circuit breaker timeout in minutes before attempting recovery (default: 5)
+    circuit-breaker-timeout-minutes: 5
+    
+    # Maximum execution timeout for all rules in minutes (default: 10)
+    execution-timeout-minutes: 10
+    
+    # Enable/disable scheduled execution (default: true)
+    enabled: true
+    
+    # Execution history retention configuration
+    history:
+      # Retention period for execution history in days (default: 90)
+      retention-days: 90
+      
+      # Cleanup job interval in hours (default: 24)
+      cleanup-interval-hours: 24
+      
+      # Maximum batch size for cleanup operations (default: 1000)
+      cleanup-batch-size: 1000
+    
+    # Performance monitoring configuration
+    monitoring:
+      # Enable detailed performance metrics (default: true)
+      metrics-enabled: true
+      
+      # Alert threshold for long-running executions in milliseconds (default: 30000)
+      long-execution-threshold-ms: 30000
+      
+      # Alert threshold for high failure rate percentage (default: 25)
+      failure-rate-threshold-percent: 25
+      
+      # Monitoring window size in minutes (default: 60)
+      monitoring-window-minutes: 60
+
+# Spring Scheduling Configuration
+spring:
+  task:
+    scheduling:
+      # Thread pool for @Scheduled methods
+      pool:
+        size: 5
+      # Thread name prefix
+      thread-name-prefix: "dynamic-rule-scheduler-"
+      # Shutdown configuration
+      shutdown:
+        await-termination: true
+        await-termination-period: 30s
+
+# Logging Configuration for Dynamic Rule Scheduler
+logging:
+  level:
+    com.aidentx.applicationpermissions.roles_management.service.impl.ScheduledDynamicRuleExecutionServiceImpl: INFO
+    com.aidentx.applicationpermissions.roles_management.service.impl.DynamicRuleServiceImpl: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level [%X{tenantId}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{tenantId}] %logger{36} - %msg%n"
+
+# Micrometer Metrics Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,metrics,prometheus"
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: "application-permissions-service"
+      service: "dynamic-rule-scheduler"

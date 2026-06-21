@@ -1,0 +1,57 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+
+/logs/
+
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+target/
+
+demo/
+
+**/target/
+services/configuration-service/src/storage/configurations/sso/saml_config/certificate
+services/configuration-service/src/storage/configurations/sso/saml_config/idk
+
+#JAR connector binaries 
+/tools/*
+
+# Documentation files (except README.md in root)
+*.md
+!README.md
+!/**/README.md
+
+# JVM crash logs
+hs_err_pid*.log
+node_modules

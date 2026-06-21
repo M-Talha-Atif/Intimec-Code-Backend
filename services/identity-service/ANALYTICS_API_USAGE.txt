@@ -1,0 +1,325 @@
+ENTITLEMENT ANALYTICS API - USAGE GUIDE
+========================================
+
+ENDPOINT
+========
+
+Method: POST
+Path: /api/v1/entitlements/analytics/kpi
+Base URL: http://localhost:8080
+
+Full URL: http://localhost:8080/api/v1/entitlements/analytics/kpi
+
+HEADERS (REQUIRED)
+==================
+
+X-Tenant-ID: <tenant-id-value>
+
+Header is REQUIRED. Without it, request will fail with 400.
+
+BODY
+====
+
+Empty body - send nothing in request body
+OR empty JSON object: {}
+
+REQUEST EXAMPLES
+================
+
+Using cURL:
+-----------
+curl -X POST http://localhost:8080/api/v1/entitlements/analytics/kpi \
+  -H "X-Tenant-ID: tenant-acme-corp" \
+  -H "Content-Type: application/json"
+
+
+Using Postman:
+--------------
+1. Create new POST request
+2. URL: http://localhost:8080/api/v1/entitlements/analytics/kpi
+3. Headers tab:
+   - Key: X-Tenant-ID
+   - Value: tenant-acme-corp
+4. Body: raw (or empty)
+5. Send
+
+
+Using Python (requests):
+------------------------
+import requests
+
+headers = {
+    "X-Tenant-ID": "tenant-acme-corp",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(
+    "http://localhost:8080/api/v1/entitlements/analytics/kpi",
+    headers=headers
+)
+
+print(response.json())
+
+
+Using Java (RestTemplate):
+--------------------------
+HttpHeaders headers = new HttpHeaders();
+headers.set("X-Tenant-ID", "tenant-acme-corp");
+headers.setContentType(MediaType.APPLICATION_JSON);
+
+HttpEntity<String> request = new HttpEntity<>("{}", headers);
+
+ResponseEntity<EntitlementKpiResponse> response = restTemplate.postForEntity(
+    "http://localhost:8080/api/v1/entitlements/analytics/kpi",
+    request,
+    EntitlementKpiResponse.class
+);
+
+EntitlementKpiResponse kpi = response.getBody();
+
+
+Using JavaScript (fetch):
+-------------------------
+fetch('http://localhost:8080/api/v1/entitlements/analytics/kpi', {
+  method: 'POST',
+  headers: {
+    'X-Tenant-ID': 'tenant-acme-corp',
+    'Content-Type': 'application/json'
+  },
+  body: ''
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));
+
+RESPONSE FORMAT
+===============
+
+Status: 200 OK
+
+Body (JSON):
+{
+  "tenantId": "tenant-acme-corp",
+  "totalEntitlements": 250,
+  "activeEntitlements": 235,
+  "orphanedEntitlements": 8,
+  "unclassifiedEntitlements": 12,
+  "highRiskEntitlements": 45,
+  "averageUsersPerEntitlement": 3.2,
+  "timestamp": 1704067200000
+}
+
+RESPONSE FIELDS
+===============
+
+tenantId (String)
+  - Echo of X-Tenant-ID header
+  - Example: "tenant-acme-corp"
+
+totalEntitlements (Long)
+  - Count of all entitlements in tenant (all resources)
+  - Example: 250
+  - Meaning: There are 250 total permission/role entitlements
+
+activeEntitlements (Long)
+  - Count with lifecycle = "Active"
+  - Example: 235
+  - Meaning: 235 entitlements are currently active
+
+orphanedEntitlements (Long)
+  - Count where owner_id is NULL
+  - Example: 8
+  - Meaning: 8 entitlements have no owner (governance risk!)
+
+unclassifiedEntitlements (Long)
+  - Count where classification is empty/NULL
+  - Example: 12
+  - Meaning: 12 entitlements are missing SOX/PII/GDPR tags
+
+highRiskEntitlements (Long)
+  - Count where risk_level = "High"
+  - Example: 45
+  - Meaning: 45 entitlements are classified as high risk
+
+averageUsersPerEntitlement (Double)
+  - Total assignments ÷ total entitlements
+  - Example: 3.2
+  - Meaning: On average, 3.2 users have each entitlement
+  - Formula: 800 assignments ÷ 250 entitlements = 3.2
+
+timestamp (Long)
+  - Unix milliseconds when response was generated
+  - Example: 1704067200000
+  - Meaning: When these metrics were calculated
+
+ERROR RESPONSES
+===============
+
+Missing Header:
+  Status: 400 Bad Request
+  Reason: X-Tenant-ID header not provided
+  Solution: Add X-Tenant-ID header to request
+
+Blank Header Value:
+  Status: 400 Bad Request
+  Reason: X-Tenant-ID header is empty or blank
+  Solution: Provide non-empty tenant ID value
+
+Server Error:
+  Status: 500 Internal Server Error
+  Reason: Database error, connection issue, etc.
+  Solution: Check server logs, verify database is running
+
+EXAMPLE WORKFLOWS
+=================
+
+Scenario 1: Dashboard Widget
+-----------------------------
+Get KPIs for dashboard display:
+
+curl -X POST http://localhost:8080/api/v1/entitlements/analytics/kpi \
+  -H "X-Tenant-ID: tenant-acme-corp"
+
+Response tells you:
+  - Total entitlements: 250
+  - Active (good): 235
+  - Orphaned (concern): 8 → ACTION NEEDED
+  - Unclassified: 12 → ACTION NEEDED
+  - High risk: 45 → MONITOR
+  - Avg users: 3.2 → HEALTHY
+
+
+Scenario 2: Governance Alert System
+------------------------------------
+Check KPIs periodically, alert if thresholds crossed:
+
+EntitlementKpiResponse kpi = getKpis("tenant-123");
+
+if (kpi.getOrphanedEntitlements() > 10) {
+    alertService.sendAlert("CRITICAL: " + kpi.getOrphanedEntitlements() + " orphaned");
+}
+
+if (kpi.getUnclassifiedEntitlements() > kpi.getTotalEntitlements() * 0.2) {
+    alertService.sendAlert("WARNING: High unclassified %");
+}
+
+if (kpi.getAverageUsersPerEntitlement() > 5) {
+    alertService.sendAlert("MEDIUM: Broad permission assignment");
+}
+
+
+Scenario 3: Compliance Report
+------------------------------
+Include KPIs in monthly compliance report:
+
+EntitlementKpiResponse kpi = getKpis("tenant-acme");
+
+report.add("Entitlement Governance Status");
+report.add("Total: " + kpi.getTotalEntitlements());
+report.add("Active: " + kpi.getActiveEntitlements());
+report.add("Orphaned: " + kpi.getOrphanedEntitlements());
+report.add("Classification: " +
+    (100 - (kpi.getUnclassifiedEntitlements()/kpi.getTotalEntitlements()*100)) + "%");
+
+CONSTANTS USED (Internal)
+==========================
+
+All these are in EntitlementAnalyticsConstants:
+
+Headers:
+  EntitlementAnalyticsConstants.HEADER_TENANT_ID = "X-Tenant-ID"
+
+Lifecycle:
+  EntitlementAnalyticsConstants.LIFECYCLE_ACTIVE = "Active"
+
+Risk Levels:
+  EntitlementAnalyticsConstants.RISK_LEVEL_HIGH = "High"
+
+Log Messages:
+  EntitlementAnalyticsConstants.LOG_FETCHING_KPI
+  EntitlementAnalyticsConstants.LOG_KPI_CALCULATION_SUCCESS
+  EntitlementAnalyticsConstants.LOG_KPI_RETURNED_SUCCESS
+
+Error Messages:
+  EntitlementAnalyticsConstants.ERROR_REQUEST_NULL
+  EntitlementAnalyticsConstants.ERROR_TENANT_ID_BLANK
+
+IMPORTANT NOTES
+===============
+
+1. Tenant is REQUIRED
+   - Always include X-Tenant-ID header
+   - Value cannot be empty
+
+2. Data Scope
+   - Returns KPIs for ALL resources in tenant
+   - Not resource-specific
+   - Tenant-wide aggregation
+
+3. Real-time Calculation
+   - KPIs calculated on each request
+   - Not cached
+   - Timestamp shows when calculated
+
+4. Performance
+   - Should complete in <500ms typically
+   - Optimized database queries
+   - Uses existing indexes
+
+5. Multi-tenant
+   - Complete isolation
+   - Different tenants get different results
+   - No data leakage between tenants
+
+TROUBLESHOOTING
+===============
+
+Issue: 400 Bad Request
+Cause: Missing or blank X-Tenant-ID header
+Fix: Add valid X-Tenant-ID header with tenant name
+
+Issue: 500 Internal Server Error
+Cause: Database connection failed or query error
+Fix: Check database is running, verify indexes exist
+
+Issue: All metrics show 0
+Cause: Tenant has no entitlements
+Fix: Verify tenant ID is correct, check if entitlements exist
+
+Issue: Wrong metrics
+Cause: Querying wrong tenant
+Fix: Verify X-Tenant-ID header value matches expected tenant
+
+SECURITY
+========
+
+✓ Tenant ID from header ensures multi-tenant isolation
+✓ Request validation ensures blank/null checks
+✓ No SQL injection (parameterized queries)
+✓ Read-only transaction (no data modification)
+✓ Proper exception handling
+
+NEXT STEPS
+==========
+
+1. Test locally:
+   curl -X POST http://localhost:8080/api/v1/entitlements/analytics/kpi \
+     -H "X-Tenant-ID: test-tenant"
+
+2. Check logs for:
+   - "Fetching entitlement KPIs for tenantId: ..."
+   - "Successfully calculated entitlement KPIs: ..."
+   - "Successfully returned entitlement KPIs"
+
+3. Integrate into:
+   - Governance dashboard
+   - Alerting system
+   - Compliance reports
+   - Analytics visualizations
+
+4. Monitor:
+   - Response times
+   - Error rates
+   - Data accuracy
+
+

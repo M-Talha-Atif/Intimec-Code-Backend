@@ -1,0 +1,28 @@
+connector:
+  # The directory where the ConnectorRegistryService will look for .jar files
+  directory: ${CONNECTOR_DIRECTORY:/home/ubuntu/backend/tools/jars}
+  # How often to scan for new connectors (e.g., every 10 seconds)
+  scan-interval-ms: 1000
+  # Per-operation timeouts (milliseconds) applied to every ConnId APIConfiguration.
+  # A half-open TCP connection to the source system (LDAP/AD/etc.) will cause
+  # ConnectorFacade.search() to block forever without these guards.  Override
+  # via environment variables for per-deployment tuning without a rebuild.
+  timeout:
+    search-ms: ${CONNECTOR_TIMEOUT_SEARCH_MS:600000}   # 10 min  – covers full paged GROUP/ACCOUNT scans
+    test-ms:   ${CONNECTOR_TIMEOUT_TEST_MS:30000}       # 30 sec  – testConnection() must be fast
+    create-ms: ${CONNECTOR_TIMEOUT_CREATE_MS:120000}   #  2 min  – single-object provision
+    update-ms: ${CONNECTOR_TIMEOUT_UPDATE_MS:120000}   #  2 min  – single-object update
+    delete-ms: ${CONNECTOR_TIMEOUT_DELETE_MS:120000}   #  2 min  – single-object deprovision
+
+# Enable debug logging for connector testing
+logging:
+  level:
+    com.aidentx: TRACE
+    org.identityconnectors.framework: OFF
+
+server:
+  port: 8093
+
+grpc:
+  server:
+    port: 9094

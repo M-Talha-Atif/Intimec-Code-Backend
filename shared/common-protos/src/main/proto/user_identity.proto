@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package com.aidentx.auth.grpc;
+
+// Java generation options
+option java_multiple_files = true;  // Each message/service gets its own Java class
+option java_package = "com.aidentx.auth.grpc"; // Package name for generated Java files
+
+// Service definition: exposes gRPC endpoints for looking up identity IDs by user IDs
+service UserIdentityLookupService {
+
+  // RPC to fetch identity IDs for multiple users in a single request
+  // Request: list of user IDs + tenant ID
+  // Response: mapping of user ID -> identity ID
+  rpc getIdentityIdsByUserIds (GetIdentityIdsRequest)
+      returns (GetIdentityIdsResponse);
+}
+
+// Request message for getIdentityIdsByUserIds RPC
+message GetIdentityIdsRequest {
+  string tenantId = 1;           // Tenant ID to which these users belong
+  repeated string userIds = 2;   // List of user UUIDs (as strings)
+}
+
+// Represents a single user → identity mapping
+message UserIdentityMapping {
+  string userId = 1;     // The UUID of the user (as string)
+  string identityId = 2; // The corresponding identity ID (as string)
+}
+
+// Response message for getIdentityIdsByUserIds RPC
+message GetIdentityIdsResponse {
+  repeated UserIdentityMapping mappings = 1; // List of all mappings
+}

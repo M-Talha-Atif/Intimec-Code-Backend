@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aidentx</groupId>
+        <artifactId>shared-parent</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath> <!-- Points to the new pom.xml in the shared/ directory -->
+    </parent>
+
+    <artifactId>dgraph-client</artifactId>
+    <name>Shared :: Dgraph Client</name>
+    <description>A shared library for simplified Dgraph operations.</description>
+
+    <!-- Dependencies are now cleaner, as versions can be managed in parent POMs -->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.dgraph</groupId>
+            <artifactId>dgraph4j</artifactId>
+            <version>21.03.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.aidentx.logging</groupId>
+            <artifactId>unified-logging-starter</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

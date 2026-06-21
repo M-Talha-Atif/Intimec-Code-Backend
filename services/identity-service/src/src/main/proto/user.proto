@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package com.aidentx.auth.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.auth.grpc";
+
+/**
+ * gRPC service for auth user lookups consumed by identity-service.
+ */
+service UserGrpcService {
+  /** Retrieves all users belonging to a specific tenant. */
+  rpc getUsersByTenant (GetUsersByTenantRequest) returns (GetUsersByTenantResponse);
+
+  /** Retrieves users by Identity-service identity IDs within a tenant. */
+  rpc getUsersByIdentityIds (GetUsersByIdentityIdsRequest) returns (GetUsersByIdentityIdsResponse);
+}
+
+/** Request message for retrieving users by tenant ID. */
+message GetUsersByTenantRequest {
+  string tenantId = 1;
+}
+
+/** Response message containing users for a tenant. */
+message GetUsersByTenantResponse {
+  repeated UserInfo users = 1;
+  int32 totalCount = 2;
+  string tenantId = 3;
+}
+
+/** Request message for retrieving users by Identity-service identity IDs. */
+message GetUsersByIdentityIdsRequest {
+  string tenantId = 1;
+  repeated string identityIds = 2;
+}
+
+/** Response message containing users matching identity IDs. */
+message GetUsersByIdentityIdsResponse {
+  repeated UserInfo users = 1;
+  int32 totalCount = 2;
+  string tenantId = 3;
+}
+
+/** Message representing auth user information. */
+message UserInfo {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string firstName = 4;
+  string lastName = 5;
+  string displayName = 6;
+  string status = 7;
+  string tenantId = 8;
+  bool isActive = 9;
+  int64 lastLoginAt = 10;
+  int64 passwordChangedAt = 11;
+  int32 failedLoginAttempts = 12;
+  int64 lockedUntil = 13;
+  int64 emailVerifiedAt = 14;
+  bool mfaEnabled = 15;
+  bool isPasswordExpired = 16;
+  string profileData = 17;
+  int64 createdAt = 18;
+  int64 updatedAt = 19;
+  string createdBy = 20;
+  string updatedBy = 21;
+  string identityId = 22;
+}
+

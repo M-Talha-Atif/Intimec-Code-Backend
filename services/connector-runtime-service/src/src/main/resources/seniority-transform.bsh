@@ -1,0 +1,9 @@
+// BeanShell Script
+// This script calculates a numeric seniority score based on UID length.
+// BeanShell syntax is very close to old-school Java.
+
+uid = sourceAttributes.get("__UID__");
+score = uid.length() * 10;
+
+// Explicitly return the calculated value.
+return score;

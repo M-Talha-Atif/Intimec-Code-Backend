@@ -1,0 +1,557 @@
+openapi: 3.0.3
+info:
+  title: Common Schemas for Identity Governance Platform
+  version: 1.0.0
+  description: A shared library of OpenAPI schemas for policies, rules, and enums used across the IGA microservices.
+
+paths: {}
+
+components:
+  schemas:
+    # --- TOP-LEVEL POLICY CONTAINER ---
+    SynchronizationPolicy:
+      type: object
+      description: "Defines the complete synchronization behavior for a specific object class on a resource."
+      required: [objectClass, correlation, reactions]
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            readOnly: true,
+            description: "Unique identifier of the policy, assigned by the Identity Service.",
+          }
+        objectClass:
+          {
+            type: string,
+            description: "The ConnID object class this policy applies to (e.g., __ACCOUNT__, __GROUP__).",
+            example: "__ACCOUNT__",
+          }
+        correlation: { $ref: "#/components/schemas/CorrelationConfig" }
+        reactions: { $ref: "#/components/schemas/ReactionMap" }
+        inbound:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/Mapping" },
+            description: "Default rules for mapping data from the resource to the identity.",
+          }
+        outbound:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/Mapping" },
+            description: "Default rules for mapping data from the identity to the resource.",
+          }
+
+    # --- REACTION SCHEMA ---
+    ReactionMap:
+      type: object
+      description: "Map of synchronization situations to their configured reactions."
+      properties:
+        LINKED: { type: string, enum: [synchronize, unlink] }
+        UNLINKED: { type: string, enum: [link, addFocus] }
+        UNMATCHED: { type: string, enum: [addFocus, createCorrelationCase] }
+        DISPUTED: { type: string, enum: [createCorrelationCase] }
+        DELETED: { type: string, enum: [deleteFocus, inactivateFocus, unlink] }
+
+    # --- CORRELATION SCHEMAS ---
+    CorrelationConfig:
+      type: object
+      description: "Defines the rules for correlating resource accounts to identities."
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [attribute, script], default: "attribute" }
+        ruleGroup: { $ref: "#/components/schemas/RuleGroup" }
+        script: { $ref: "#/components/schemas/CorrelationScript" }
+
+    RuleGroup:
+      type: object
+      required: [combinator, rules]
+      properties:
+        combinator:
+          type: string
+          enum: [and, or]
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+
+    Rule:
+      type: object
+      properties:
+        combinator:
+          type: string
+          enum: [and, or]
+        not:
+          type: boolean
+          default: false
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+        field:
+          type: string
+        operator:
+          type: string
+          enum:
+            [
+              "=",
+              "!=",
+              ">",
+              "<",
+              ">=",
+              "<=",
+              "contains",
+              "startsWith",
+              "endsWith",
+            ]
+        valueSource:
+          type: string
+          enum: [value, static]
+        value:
+          type: string
+
+    CorrelationScript:
+      type: object
+      required: [lang, data]
+      properties:
+        lang: { type: string, enum: [beanshell, graaljs, groovy] }
+        data: { type: string, description: "Script content." }
+
+    # --- MAPPING SCHEMAS ---
+    Mapping:
+      type: object
+      description: "Defines logic for a single target attribute by evaluating expressions in order and using the first non-null result."
+      required: [target, expressions]
+      properties:
+        target:
+          {
+            type: string,
+            description: "Name of the target attribute to populate.",
+          }
+        expressions:
+          {
+            type: array,
+            minItems: 1,
+            items: { $ref: "#/components/schemas/MappingExpression" },
+            description: "Ordered list of expressions. The first to produce a non-null value wins.",
+          }
+
+    MappingExpression:
+      type: object
+      description: "A single rule within a mapping, consisting of a value generator (source) and an optional condition."
+      required: [source]
+      properties:
+        condition: { $ref: "#/components/schemas/MappingCondition" }
+        source: { $ref: "#/components/schemas/MappingSource" }
+
+    MappingCondition:
+      type: object
+      description: "A condition that must be true for the mapping expression to be evaluated."
+      required: [attribute, operator]
+      properties:
+        attribute: { type: string, description: "Source attribute to check." }
+        operator:
+          { type: string, enum: [equals, notEquals, in, exists, notExists] }
+        value: { description: "Value for 'equals' or 'notEquals'." }
+        values:
+          {
+            type: array,
+            items: {},
+            description: "An array of values for 'in'.",
+          }
+
+    MappingSource:
+      oneOf:
+        - $ref: "#/components/schemas/AttributeSource"
+        - $ref: "#/components/schemas/ConstantSource"
+        - $ref: "#/components/schemas/TransformSource"
+        - $ref: "#/components/schemas/ScriptSource"
+      discriminator: { propertyName: type }
+
+    AttributeSource:
+      type: object
+      required: [type, attribute]
+      properties:
+        type: { type: string, enum: [attribute] }
+        attribute:
+          { type: string, description: "Name of the source attribute." }
+
+    ConstantSource:
+      type: object
+      required: [type, value]
+      properties:
+        type: { type: string, enum: [constant] }
+        value: { description: "The constant value to be mapped." }
+
+    TransformSource:
+      type: object
+      required: [type, attribute, transform]
+      properties:
+        type: { type: string, enum: [transform] }
+        attribute:
+          { type: string, description: "Source attribute to transform." }
+        transform: { type: string, enum: [uppercase, lowercase, trim] }
+
+    ScriptSource:
+      type: object
+      required: [type, script]
+      properties:
+        type: { type: string, enum: [script] }
+        script: { $ref: "#/components/schemas/MappingScript" }
+
+    MappingScript:
+      type: object
+      required: [language, code]
+      properties:
+        language: { type: string, enum: [beanshell, graaljs, groovy] }
+        code:
+          {
+            type: string,
+            description: "Script that returns the computed value. A 'source' object is available.",
+          }
+
+    # --- APPLICATION SCHEMAS ---
+    ApplicationDetails:
+      type: object
+      description: Core application metadata and configuration
+      required: [name, isAuthoritative, identityType, connectorId]
+      properties:
+        name:
+          type: string
+          description: The application name
+        description:
+          type: string
+          description: Optional description of the application
+        isAuthoritative:
+          type: boolean
+          description: Whether this application is the authoritative source
+        identityType:
+          type: string
+          enum: [employee, non_employee, non_human]
+          description: The type of identities managed by this application
+        connectorId:
+          type: string
+          description: The ID of the connector to use
+        owner:
+          type: array
+          items:
+            $ref: "#/components/schemas/OwnerReference"
+          description: List of application owners
+        businessOwner:
+          type: array
+          items:
+            $ref: "#/components/schemas/OwnerReference"
+          description: List of business owners
+        category:
+          type: array
+          items:
+            type: string
+          description: Application categories
+        riskLevel:
+          type: string
+          enum: [Low, Medium, High]
+          description: Risk level of the application
+        complianceLabels:
+          type: array
+          items:
+            type: string
+          description: Compliance labels (e.g., PII, GDPR)
+        scopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopeReference"
+          description: Application scopes or permissions
+        department:
+          $ref: "#/components/schemas/DepartmentReference"
+        iconUrl:
+          type: string
+          format: uri
+          readOnly: true
+          description: URL to the uploaded application icon
+
+    OwnerReference:
+      type: object
+      description: Reference to an owner (human user)
+      required: [id, name, kind]
+      properties:
+        id:
+          type: string
+          description: UUID of the owner user
+        name:
+          type: string
+          description: Display name of the owner
+        kind:
+          type: string
+          enum: [employee, non_employee]
+          description: Type of owner (must be human identity)
+
+    ScopeReference:
+      type: object
+      description: Reference to an application scope or permission
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          description: Scope identifier
+        name:
+          type: string
+          description: Scope display name
+
+    DepartmentReference:
+      type: object
+      description: Reference to a department
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          description: Department identifier
+        name:
+          type: string
+          description: Department name
+
+    ConnectorConfiguration:
+      type: object
+      description: Database connector configuration
+      required: [user, password, table, keyColumn, jdbcDriver, jdbcUrlTemplate]
+      properties:
+        user:
+          type: string
+          description: Database username
+        password:
+          type: string
+          format: password
+          description: Database password
+        table:
+          type: string
+          description: Table name to query
+        keyColumn:
+          type: string
+          description: Primary key column name
+        jdbcDriver:
+          type: string
+          description: JDBC driver class name
+        jdbcUrlTemplate:
+          type: string
+          description: JDBC connection URL
+
+    SchemaConfiguration:
+      type: object
+      description: Schema configuration for attribute mapping
+      properties:
+        definitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchemaDefinition"
+
+    SchemaDefinition:
+      type: object
+      properties:
+        objectClass:
+          type: string
+          description: The object type (e.g. __ACCOUNT__)
+        type:
+          type: string
+          enum: [account, entitlement, generic]
+          description: The kind of object type
+        displayAttribute:
+          type: string
+          description: The attribute used for display purposes
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchemaAttribute"
+        capabilities:
+          type: array
+          items:
+            type: string
+
+    SchemaAttribute:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        flags:
+          type: array
+          items:
+            type: string
+
+    AccessConfiguration:
+      type: object
+      description: Access review configuration
+      properties:
+        accessReview:
+          type: boolean
+          description: Whether access review is enabled
+
+    GovernanceConfig:
+      type: object
+      description: Governance/source priority configuration
+      required: [attributeMappings]
+      properties:
+        attributeMappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingAttributeMapping"
+          description: Simple attribute mappings for onboarding
+
+    OnboardingAttributeMapping:
+      type: object
+      required: [targetAttribute]
+      properties:
+        sourceAttribute:
+          type: string
+          description: Attribute on the source resource (optional if mode is script)
+        targetAttribute:
+          type: string
+          description: System key of the identity attribute
+        mode:
+          type: string
+          enum: [direct, script, lowercase, uppercase]
+          default: direct
+        script:
+          $ref: "#/components/schemas/CorrelationScript"
+
+    AttributeSourcePriority:
+      type: object
+      description: Defines which source takes precedence for a specific attribute
+      required: [targetAttribute, priorities]
+      properties:
+        targetAttribute:
+          type: string
+          description: System key of the identity attribute
+        priorities:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ResourcePriority"
+          description: Ordered list of resource priorities (1 = highest)
+
+    ResourcePriority:
+      type: object
+      description: Priority assignment for a specific resource
+      required: [resourceId, sourceAttribute, priority]
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+          description: The application/resource ID
+        sourceAttribute:
+          type: string
+          description: Attribute on the source resource
+        priority:
+          type: integer
+          minimum: 1
+          description: Priority level (1 = highest priority)
+
+    # --- LIFECYCLE POLICY SCHEMAS ---
+    LifecyclePolicies:
+      type: object
+      description: Identity lifecycle automation policies for onboarding and offboarding
+      properties:
+        onboarding:
+          $ref: "#/components/schemas/OnboardingPolicy"
+        offboarding:
+          $ref: "#/components/schemas/OffboardingPolicy"
+
+    OnboardingPolicy:
+      type: object
+      description: Automated provisioning and role assignment during identity onboarding
+      properties:
+        enabled:
+          type: boolean
+          default: true
+          description: Whether automatic onboarding is enabled
+        birthrightRoles:
+          type: array
+          items:
+            type: string
+          description: Roles automatically assigned to new identities
+        autoProvision:
+          type: array
+          items:
+            $ref: "#/components/schemas/AutoProvisionRule"
+          description: Rules for automatic account provisioning
+
+    AutoProvisionRule:
+      type: object
+      description: Rule defining when to automatically provision an account
+      required: [resourceId, conditions]
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+          description: Target resource/application ID for provisioning
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvisionCondition"
+          description: Conditions that must be met to trigger provisioning
+
+    ProvisionCondition:
+      type: object
+      description: Condition for evaluating provisioning rules
+      required: [attribute, operator]
+      properties:
+        attribute:
+          type: string
+          description: Identity attribute to evaluate
+        operator:
+          type: string
+          enum: [equals, notEquals, in]
+          description: Comparison operator
+        value:
+          description: Single value for equals/notEquals operators
+        values:
+          type: array
+          items:
+            type: string
+          description: Array of values for 'in' operator
+
+    OffboardingPolicy:
+      type: object
+      description: Automated actions during identity offboarding/termination
+      properties:
+        enabled:
+          type: boolean
+          default: true
+          description: Whether automatic offboarding is enabled
+        gracePeriodDays:
+          type: integer
+          minimum: 0
+          default: 30
+          description: Days to wait before executing offboarding actions
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/OffboardingAction"
+          description: Actions to execute during offboarding
+
+    OffboardingAction:
+      type: object
+      description: Action to perform during identity offboarding
+      required: [type, delay]
+      properties:
+        type:
+          type: string
+          enum: [DISABLE_ACCOUNTS, REVOKE_ACCESS, DELETE_ACCOUNTS]
+          description: Type of offboarding action
+        delay:
+          type: string
+          enum: [IMMEDIATE, 7_DAYS, 30_DAYS]
+          description: When to execute the action relative to offboarding event
+
+    # --- ENUMS ---
+    IdentityType:
+      type: string
+      enum: [EMPLOYEE, NON_EMPLOYEE, NON_HUMAN]
+
+    SynchronizationSituation:
+      type: string
+      enum: [LINKED, UNLINKED, UNMATCHED, DISPUTED, DELETED]

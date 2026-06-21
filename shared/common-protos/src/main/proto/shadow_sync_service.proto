@@ -1,0 +1,344 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.shadow;
+
+import "google/protobuf/struct.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.shadow";
+option java_outer_classname = "ShadowSyncServiceProto";
+
+// ===================================================================
+//  Shadow Synchronization Service
+//
+//  This service is the heart of the IGA import/reconciliation pipeline.
+//  It follows the MidPoint pattern:
+//    Connector → Shadow → Correlation → Identity Linking
+//
+//  The task-management-service (orchestrator) calls this service
+//  for each object discovered during a connector import task.
+//  The identity-service (domain owner) processes each object through
+//  the full synchronization pipeline.
+// ===================================================================
+service ShadowSyncService {
+
+  // Process a single resource object discovered during an import task.
+  // This is the main entry point for the import pipeline.
+  // For each connector account, this RPC:
+  //   1. Creates or updates the shadow
+  //   2. Evaluates correlation rules against existing identities
+  //   3. Links the shadow to a matching identity (if auto-link is enabled)
+  //   4. Returns the processing result with situation and actions taken
+  rpc ProcessImportedObject(ProcessImportedObjectRequest) returns (ProcessImportedObjectResponse);
+
+  // Process a batch of resource objects in a single RPC call.
+  // Enterprise-scale optimization: reduces gRPC overhead from O(n) calls to O(n/batchSize).
+  // Each object in the batch goes through the full sync pipeline independently.
+  rpc ProcessImportedObjectBatch(ProcessImportedObjectBatchRequest) returns (ProcessImportedObjectBatchResponse);
+
+  // Called after a full import scan completes.
+  // Marks shadows that were NOT seen during this import run as DELETED.
+  // This detects accounts that were removed from the source system.
+  rpc FinalizeSyncRun(FinalizeSyncRunRequest) returns (FinalizeSyncRunResponse);
+
+  // Retrieve shadows for a specific resource (application).
+  // Used by the frontend to display accounts for an application.
+  rpc GetShadowsByResource(GetShadowsByResourceRequest) returns (GetShadowsByResourceResponse);
+}
+
+// ===================================================================
+//  ProcessImportedObject Messages
+// ===================================================================
+
+message ProcessImportedObjectRequest {
+  string tenant_id = 1;
+
+  // The application ID (resource) this object belongs to
+  string resource_id = 2;
+
+  // The unique identifier of this object in the source system
+  // (e.g., CSV row ID, LDAP DN, AD objectGUID)
+  string resource_uid = 3;
+
+  // The ConnID object class (e.g., "__ACCOUNT__", "__GROUP__")
+  string object_class = 4;
+
+  // The kind of resource object
+  string kind = 5;
+
+  // The identity type configured for this application (e.g., "EMPLOYEE")
+  string identity_type = 6;
+
+  // All attributes of the object as fetched from the connector
+  google.protobuf.Struct attributes = 7;
+
+  // The sync run ID - used to track which objects were seen in this import
+  string sync_run_id = 8;
+
+  // The type of synchronization task being executed
+  SyncTaskType task_type = 9;
+
+  // Task-level reaction overrides (from task configuration).
+  // These take priority over application-level governance policy reactions.
+  repeated SyncReaction task_reactions = 10;
+
+  // When true, the pipeline evaluates everything (shadow lookup, correlation,
+  // situation classification, reaction resolution) but does NOT persist any changes.
+  // The response will contain the full preview of what WOULD happen.
+  bool dry_run = 11;
+
+  // Schema-configured attribute names for extracting display name and description
+  string display_attribute = 12;      // e.g. "cn", "__NAME__"
+  string description_attribute = 13;  // e.g. "description"
+
+  // Schema-defined attribute names: only these attributes are stored.
+  // If empty, ALL connector attributes are stored (backward-compatible).
+  repeated string schema_attribute_names = 14;
+}
+
+message ProcessImportedObjectResponse {
+  // Whether processing succeeded
+  bool success = 1;
+
+  // The shadow ID (created or updated)
+  string shadow_id = 2;
+
+  // The resulting synchronization situation
+  SynchronizationSituation situation = 3;
+
+  // The action that was taken
+  SynchronizationAction action = 4;
+
+  // If linked, the identity ID
+  string linked_identity_id = 5;
+
+  // Human-readable message about what happened
+  string message = 6;
+
+  // If an identity was created during this processing
+  string created_identity_id = 7;
+
+  // Number of identity attributes updated (for LINKED updates)
+  int32 attributes_updated_count = 8;
+
+  // Dry-run only: the resolved reaction action string (e.g., "add-focus", "link", "sync")
+  string resolved_reaction = 9;
+
+  // Dry-run only: attribute changes that would be applied
+  repeated AttributeChange attribute_changes = 12;
+
+  // The resource UID this response corresponds to (for batch result correlation)
+  string resource_uid = 13;
+}
+
+// Represents a single attribute change detected during dry-run simulation
+message AttributeChange {
+  string field_name = 1;
+  string old_value = 2;
+  string new_value = 3;
+}
+
+// ===================================================================
+//  Batch ProcessImportedObject Messages (Enterprise Scale)
+// ===================================================================
+
+// Batch request: process multiple resource objects in one RPC call.
+// Shared fields (tenant, resource, identity_type, task_type, reactions, dry_run)
+// are specified once; per-object data (uid, attributes) is in the items list.
+message ProcessImportedObjectBatchRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+  string object_class = 3;
+  string kind = 4;
+  string identity_type = 5;
+  string sync_run_id = 6;
+  SyncTaskType task_type = 7;
+  repeated SyncReaction task_reactions = 8;
+  bool dry_run = 9;
+
+  // The batch of objects to process
+  repeated BatchObjectEntry objects = 10;
+
+  // Schema-configured attribute names for extracting display name and description
+  string display_attribute = 11;      // e.g. "cn", "__NAME__"
+  string description_attribute = 12;  // e.g. "description"
+
+  // Schema-defined attribute names: only these attributes are stored.
+  // If empty, ALL connector attributes are stored (backward-compatible).
+  repeated string schema_attribute_names = 13;
+}
+
+// A single object within a batch request
+message BatchObjectEntry {
+  string resource_uid = 1;
+  google.protobuf.Struct attributes = 2;
+}
+
+// Batch response: one result per object in the batch
+message ProcessImportedObjectBatchResponse {
+  int32 total_processed = 1;
+  int32 success_count = 2;
+  int32 error_count = 3;
+  repeated ProcessImportedObjectResponse results = 4;
+}
+
+// ===================================================================
+//  FinalizeSyncRun Messages
+// ===================================================================
+
+message FinalizeSyncRunRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+  string sync_run_id = 3;
+
+  // All resource UIDs that were seen during this import run
+  repeated string seen_resource_uids = 4;
+
+  // The type of synchronization task
+  SyncTaskType task_type = 5;
+
+  // The identity type configured for this application (e.g., "EMPLOYEE")
+  string identity_type = 6;
+
+  // Task-level reaction overrides (from task configuration).
+  // These take priority over application-level governance policy reactions.
+  repeated SyncReaction task_reactions = 7;
+
+  // When true, only evaluates deletions without persisting changes.
+  bool dry_run = 8;
+
+  // When true, skips entitlement cleanup (deleteAbsentEntitlements / deleteAssignmentsForAbsentEntitlements).
+  // Must be set when importEntitlements=false so an accounts-only run does not wipe entitlements
+  // that were imported by a previous task run with a different syncRunId.
+  bool skip_entitlement_cleanup = 9;
+
+  // When true, skips assignment cleanup (deleteStaleAssignmentsBulk).
+  // Must be set when importAccounts=false so an entitlements-only run does not wipe assignments
+  // whose lastSyncRunId belongs to a prior run that did import accounts.
+  // Assignments are only stamped with the current syncRunId during account import — if accounts
+  // were not processed this run, all existing assignments would appear stale and be deleted.
+  bool skip_assignment_cleanup = 10;
+}
+
+message FinalizeSyncRunResponse {
+  bool success = 1;
+  int32 deleted_count = 2;        // Shadows marked as DELETED
+  int32 total_shadows = 3;        // Total shadows for this resource
+  int32 identities_disabled = 4;  // Identities disabled due to deletion (reconciliation)
+  string message = 5;
+
+  // Dry-run only: details of each shadow that would be marked DELETED
+  repeated DeletionPreview deletion_previews = 6;
+
+  // Entitlement cleanup statistics (populated for both real + dry-run)
+  int32 deleted_entitlements = 7;
+  int32 revoked_assignments = 8;
+
+  // Dry-run only: details of each entitlement that would be deleted
+  repeated EntitlementDeletionPreview entitlement_deletion_previews = 9;
+}
+
+// Dry-run preview of a shadow that would be marked as DELETED
+message DeletionPreview {
+  string shadow_id = 1;
+  string resource_uid = 2;
+  string linked_identity_id = 3;
+  string resolved_reaction = 4;  // e.g., "unlink", "inactivate-focus", "delete-focus"
+}
+
+// Dry-run preview of an entitlement that would be deleted during cleanup
+message EntitlementDeletionPreview {
+  string entitlement_id = 1;
+  string source_uid = 2;
+  string display_name = 3;
+  string object_class = 4;
+  int32 assignment_count = 5;  // Number of assignments that would also be removed
+}
+
+// ===================================================================
+//  GetShadowsByResource Messages
+// ===================================================================
+
+message GetShadowsByResourceRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+
+  // Optional filters
+  string object_class = 3;
+  string situation_filter = 4;  // Filter by situation
+  bool linked_only = 5;         // Only return linked shadows
+
+  // Pagination
+  int32 page_size = 6;
+  int32 page_offset = 7;
+
+  // Text search filter (matches against resource_uid and attributes)
+  string search_filter = 8;
+}
+
+message GetShadowsByResourceResponse {
+  repeated ShadowDTO shadows = 1;
+  int64 total_count = 2;
+  bool has_more = 3;
+}
+
+// ===================================================================
+//  Shared Message Types
+// ===================================================================
+
+// Task-level synchronization reaction configuration.
+// Passed from task-management-service to override default policy reactions.
+message SyncReaction {
+  string situation = 1;  // UNMATCHED, UNLINKED, LINKED, DELETED, DISPUTED
+  string action = 2;     // add-focus, link, sync, unlink, inactivate-focus, delete-focus, none
+}
+
+message ShadowDTO {
+  string id = 1;
+  string tenant_id = 2;
+  string resource_id = 3;
+  string resource_uid = 4;
+  string object_class = 5;
+  string kind = 6;
+  string linked_identity_id = 7;
+  SynchronizationSituation situation = 8;
+  google.protobuf.Struct attributes = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+  int64 last_synchronized_at = 12;
+}
+
+// MidPoint-aligned synchronization situations
+enum SynchronizationSituation {
+  SITUATION_UNSPECIFIED = 0;
+  UNMATCHED = 1;   // Shadow exists, no correlation match found
+  UNLINKED = 2;    // Shadow exists, correlation match found but not yet linked
+  LINKED = 3;      // Shadow is linked to an identity
+  DELETED = 4;     // Shadow's source object no longer exists in the resource
+  DISPUTED = 5;    // Multiple correlation matches found (ambiguous)
+}
+
+// Actions taken during synchronization
+enum SynchronizationAction {
+  ACTION_UNSPECIFIED = 0;
+  SHADOW_CREATED = 1;           // New shadow was created
+  SHADOW_UPDATED = 2;           // Existing shadow was updated
+  CORRELATION_MATCHED = 3;      // Correlation found a match
+  AUTO_LINKED = 4;              // Shadow was automatically linked to identity
+  NO_MATCH = 5;                 // No correlation match found
+  DISPUTED_MATCH = 6;           // Multiple matches found
+  ALREADY_LINKED = 7;           // Shadow was already linked, attributes updated
+  IDENTITY_CREATED = 8;         // New identity created from import (UNMATCHED reaction)
+  IDENTITY_UPDATED = 9;         // Existing identity updated from inbound mappings
+  IDENTITY_LINKED = 10;         // Shadow linked to existing identity (UNLINKED reaction)
+  IDENTITY_DISABLED = 11;       // Identity disabled due to account deletion
+  REACTION_SKIPPED = 12;        // Reaction skipped (no mappings or policy)
+}
+
+// Task type determines which phases of the sync pipeline to execute
+enum SyncTaskType {
+  TASK_TYPE_UNSPECIFIED = 0;
+  IMPORT = 1;           // Phase A (shadows + correlation + reactions)
+  RECONCILIATION = 2;   // Phase A + Phase B (deletion detection) + Phase C (orphan detection)
+  DISCOVERY = 3;        // Preview mode: shadows + correlation only, NO reactions executed
+}

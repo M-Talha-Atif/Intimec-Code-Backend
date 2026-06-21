@@ -1,0 +1,544 @@
+# FILE: applications_api.yml
+openapi: 3.0.3
+info:
+  title: Application Management API (Core Service)
+  description: |
+    Orchestration API for onboarding and managing applications (resources).
+
+    **Architectural Role**: The Core Service acts as the "front door" for application onboarding. It manages application metadata (details, connector configuration, schema) and orchestrates the creation of associated policies by forwarding them to the Identity Service.
+
+    **Policy Storage**: This API does NOT store policies. During onboarding, all policy configurations (correlation per identity type, governance/source priorities per identity type, and lifecycle/provisioning policies per identity type) are forwarded to the Identity Service, which serves as the single source of truth. To update policies after onboarding, use the Identity Service's Policy APIs directly.
+
+    **Per-Identity-Type Policies**: Applications can define different correlation rules, source priorities, and lifecycle policies for each identity type they manage (EMPLOYEE, NON_EMPLOYEE, NON_HUMAN). These are configured during onboarding as arrays of identity-type-specific configurations.
+
+    **Application Ownership**: Application owners must be human identities (employee or non_employee types). Generic identity references are not supported.
+
+    **Error Handling**: This API returns errors in a standardized format using RFC 7807 Problem Details concepts. All error responses will have a content type of `application/problem+json`.
+  version: 2.4.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Applications
+    description: Manage the lifecycle of applications (resources) and their default synchronization policies.
+
+paths:
+  /applications:
+    get:
+      tags: [Applications]
+      summary: List all applications
+      operationId: listApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (0-based)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          description: Sort criteria (e.g., name,asc or createdAt,desc)
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A paginated list of applications retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedApplicationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags: [Applications]
+      summary: Onboard a new application
+      operationId: onboardApplication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        description: |
+          Multipart form data containing application details split into separate parts.
+          Each configuration part is sent as a JSON object with the appropriate content type.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [details, connector]
+              properties:
+                details:
+                  description: Application details including name, type, owners, etc.
+                  $ref: "common_schemas.yml#/components/schemas/ApplicationDetails"
+                connector:
+                  description: Connector configuration (database connection details)
+                  $ref: "common_schemas.yml#/components/schemas/ConnectorConfiguration"
+                schema:
+                  description: Schema configuration for attribute mapping
+                  $ref: "common_schemas.yml#/components/schemas/SchemaConfiguration"
+                correlation:
+                  description: Correlation configuration for the application's identity type
+                  $ref: "common_schemas.yml#/components/schemas/CorrelationConfig"
+                governance:
+                  description: Governance/source priority configuration for the application's identity type
+                  $ref: "common_schemas.yml#/components/schemas/GovernanceConfig"
+                access:
+                  description: Access review configuration
+                  $ref: "common_schemas.yml#/components/schemas/AccessConfiguration"
+                provisioning:
+                  description: Lifecycle/provisioning policies for the application's identity type
+                  $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies"
+                icon:
+                  type: string
+                  format: binary
+                  description: Optional application icon image file (PNG, JPG, JPEG, GIF, or SVG)
+            encoding:
+              details:
+                contentType: application/json
+              connector:
+                contentType: application/json
+              schema:
+                contentType: application/json
+              correlation:
+                contentType: application/json
+              governance:
+                contentType: application/json
+              access:
+                contentType: application/json
+              provisioning:
+                contentType: application/json
+              icon:
+                contentType: image/png, image/jpeg, image/jpg, image/gif, image/svg+xml
+      responses:
+        "201":
+          description: Application onboarded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "424":
+          $ref: "#/components/responses/DependencyFailure"
+
+  /applications/{applicationId}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Applications]
+      summary: Get application by ID
+      operationId: getApplicationById
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Application details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Applications]
+      summary: Update an application
+      operationId: updateApplication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        description: |
+          Multipart form data for updating application configuration.
+          Each configuration part is sent as a JSON object with the appropriate content type.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [details, connector]
+              properties:
+                details:
+                  description: Updated application details
+                  $ref: "common_schemas.yml#/components/schemas/ApplicationDetails"
+                connector:
+                  description: Updated connector configuration
+                  $ref: "common_schemas.yml#/components/schemas/ConnectorConfiguration"
+                schema:
+                  description: Updated schema configuration
+                  $ref: "common_schemas.yml#/components/schemas/SchemaConfiguration"
+                correlation:
+                  $ref: "common_schemas.yml#/components/schemas/CorrelationConfig"
+                governance:
+                  $ref: "common_schemas.yml#/components/schemas/GovernanceConfig"
+                access:
+                  description: Updated access configuration
+                  $ref: "common_schemas.yml#/components/schemas/AccessConfiguration"
+                provisioning:
+                  $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies"
+                icon:
+                  type: string
+                  format: binary
+                  description: Optional application icon image file to replace existing icon
+            encoding:
+              details:
+                contentType: application/json
+              connector:
+                contentType: application/json
+              schema:
+                contentType: application/json
+              correlation:
+                contentType: application/json
+              governance:
+                contentType: application/json
+              access:
+                contentType: application/json
+              provisioning:
+                contentType: application/json
+              icon:
+                contentType: image/png, image/jpeg, image/jpg, image/gif, image/svg+xml
+      responses:
+        "200":
+          description: Application updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "424":
+          $ref: "#/components/responses/DependencyFailure"
+    delete:
+      tags: [Applications]
+      summary: Decommission an application
+      operationId: deleteApplication
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Application decommissioned successfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The application cannot be decommissioned due to a conflict.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                type: "urn:aidentx:errors:decommission-conflict"
+                title: "Decommission Conflict"
+                status: 409
+                detail: "Cannot decommission application 'Corporate Active Directory' because it has 3 active synchronization tasks. Please suspend or delete these tasks first."
+                instance: "/api/v1/applications/f1a4a4d6-8d6a-4b0c-80d4-7a193b2a1a2b"
+
+  /applications/{applicationId}/schema:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Applications]
+      summary: Get application schema object types
+      operationId: getApplicationSchemaObjectTypes
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Schema object types retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationSchemaObjectType"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /applications/{applicationId}/schema/{objectType}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: objectType
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Applications]
+      summary: Get application schema definitions by object type
+      operationId: getApplicationSchemaDefinitions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Schema definitions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationSchemaDefinition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: The request payload is malformed or failed validation checks.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:validation"
+            title: "Validation Error"
+            status: 400
+            detail: "The request body failed validation."
+            instance: "/api/v1/applications"
+            invalid-params:
+              - name: "details.identityType"
+                reason: "must be one of the following values: EMPLOYEE, NON_EMPLOYEE, NON_HUMAN"
+    Unauthorized:
+      description: Authentication is required. The provided JWT is missing, invalid, or expired.
+    Forbidden:
+      description: Insufficient permissions. The authenticated user is not authorized to perform this action, often due to tenant isolation.
+    NotFound:
+      description: The requested application was not found.
+    Conflict:
+      description: The request conflicts with the current state of the resource.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:name-conflict"
+            title: "Name Conflict"
+            status: 409
+            detail: "An application with the name 'Corporate Active Directory' already exists for this tenant."
+            instance: "/api/v1/applications"
+    DependencyFailure:
+      description: An upstream service required to complete the request failed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:dependency-failure"
+            title: "Dependency Failure"
+            status: 424
+            detail: "Failed to persist synchronization policies in the Identity Service. The upstream service returned an error."
+            instance: "/api/v1/applications"
+
+  schemas:
+    PaginatedApplicationResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationResponse"
+        pageable:
+          type: object
+          properties:
+            pageNumber:
+              type: integer
+            pageSize:
+              type: integer
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                empty:
+                  type: boolean
+                unsorted:
+                  type: boolean
+            offset:
+              type: integer
+            paged:
+              type: boolean
+            unpaged:
+              type: boolean
+        totalPages:
+          type: integer
+        totalElements:
+          type: integer
+        last:
+          type: boolean
+        first:
+          type: boolean
+        numberOfElements:
+          type: integer
+        size:
+          type: integer
+        number:
+          type: integer
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+            empty:
+              type: boolean
+            unsorted:
+              type: boolean
+        empty:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      description: A problem details object (RFC 7807) for describing API errors.
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI identifier for the problem type.
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type.
+        status:
+          type: integer
+          format: int32
+          description: The HTTP status code.
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem.
+        instance:
+          type: string
+          format: uri
+          description: A URI reference that identifies the specific occurrence of the problem.
+
+    # --- Local Schemas for this API ---
+    ApplicationOnboardingRequest:
+      type: object
+      description: This schema is not used directly in multipart requests but represents the complete structure
+      required: [details, connector]
+      properties:
+        details:
+          $ref: "common_schemas.yml#/components/schemas/ApplicationDetails"
+        connector:
+          $ref: "common_schemas.yml#/components/schemas/ConnectorConfiguration"
+        schema:
+          $ref: "common_schemas.yml#/components/schemas/SchemaConfiguration"
+        correlation:
+          $ref: "common_schemas.yml#/components/schemas/CorrelationConfig"
+        governance:
+          $ref: "common_schemas.yml#/components/schemas/GovernanceConfig"
+        access:
+          $ref: "common_schemas.yml#/components/schemas/AccessConfiguration"
+        provisioning:
+          $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies"
+
+    ApplicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique application identifier
+        details:
+          $ref: "common_schemas.yml#/components/schemas/ApplicationDetails"
+        connector:
+          $ref: "common_schemas.yml#/components/schemas/ConnectorConfiguration"
+        schema:
+          $ref: "common_schemas.yml#/components/schemas/SchemaConfiguration"
+        correlation:
+          $ref: "common_schemas.yml#/components/schemas/CorrelationConfig"
+        governance:
+          $ref: "common_schemas.yml#/components/schemas/GovernanceConfig"
+        access:
+          $ref: "common_schemas.yml#/components/schemas/AccessConfiguration"
+        provisioning:
+          $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the application was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the application was last updated
+
+    ApplicationSchemaDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        flags:
+          type: array
+          items:
+            type: string
+
+    ApplicationSchemaObjectType:
+      type: object
+      properties:
+        type:
+          type: string
+        displayAttribute:
+          type: string

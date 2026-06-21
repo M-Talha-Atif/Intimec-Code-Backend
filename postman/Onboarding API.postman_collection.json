@@ -1,0 +1,534 @@
+{
+	"info": {
+		"_postman_id": "eb3b612f-c075-4dc7-8b4a-7d51a285af66",
+		"name": "Onboarding API",
+		"description": "Collection for testing Application Onboarding endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "50228648"
+	},
+	"item": [
+		{
+			"name": "Create Application - Basic",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "details",
+							"value": "{\n  \"name\": \"Test App Basic\",\n  \"description\": \"A test application\",\n  \"isAuthoritative\": true,\n  \"identityType\": \"employee\",\n  \"riskLevel\": \"low\",\n  \"owner\": [],\n  \"businessOwner\": [],\n  \"category\": [],\n  \"complianceLabels\": [],\n  \"scopes\": [],\n  \"department\": null,\n  \"connectorId\": \"ldap-connector\"\n}",
+							"type": "text"
+						},
+						{
+							"key": "schema",
+							"value": "{\n  \"definitions\": [\n    {\n      \"objectClass\": \"__ACCOUNT__\",\n      \"type\": \"account\",\n      \"displayAttribute\": \"uid\",\n      \"attributes\": [\n        {\n          \"name\": \"uid\",\n          \"type\": \"string\",\n          \"category\": \"core\",\n          \"description\": \"User ID\",\n          \"flags\": [\"REQUIRED\"]\n        },\n        {\n          \"name\": \"email\",\n          \"type\": \"string\",\n          \"category\": \"contact\",\n          \"description\": \"Email Address\",\n          \"flags\": []\n        }\n      ]\n    }\n  ]\n}",
+							"type": "text"
+						},
+						{
+							"key": "connector",
+							"value": "{\n  \"connectorId\": \"ldap-connector\",\n  \"config\": {\n    \"url\": \"ldap://localhost:389\"\n  }\n}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Application - Attribute Correlation",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "details",
+							"value": "{\n  \"name\": \"Test App Attribute Correlation\",\n  \"description\": \"App with attribute correlation\",\n  \"isAuthoritative\": true,\n  \"identityType\": \"employee\",\n  \"riskLevel\": \"low\",\n  \"owner\": [],\n  \"businessOwner\": [],\n  \"category\": [],\n  \"complianceLabels\": [],\n  \"scopes\": [],\n  \"department\": null,\n  \"connectorId\": \"ldap-connector\"\n}",
+							"type": "text"
+						},
+						{
+							"key": "connector",
+							"value": "{\n  \"connectorId\": \"ldap-connector\",\n  \"config\": {\n    \"url\": \"ldap://localhost:389\"\n  }\n}",
+							"type": "text"
+						},
+						{
+							"key": "schema",
+							"value": "{\n  \"definitions\": [\n    {\n      \"objectClass\": \"__ACCOUNT__\",\n      \"type\": \"account\",\n      \"displayAttribute\": \"uid\",\n      \"attributes\": [\n        {\n          \"name\": \"uid\",\n          \"type\": \"string\",\n          \"category\": \"core\",\n          \"description\": \"User ID\",\n          \"flags\": [\"REQUIRED\"]\n        }\n      ]\n    }\n  ]\n}",
+							"type": "text"
+						},
+						{
+							"key": "correlation",
+							"value": "{\n  \"mode\": \"attribute\",\n  \"ruleGroup\": {\n    \"combinator\": \"and\",\n    \"rules\": [\n      {\n        \"field\": \"uid\",\n        \"operator\": \"=\",\n        \"valueSource\": \"value\",\n        \"value\": \"id\"\n      }\n    ]\n  }\n}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Application - Script Correlation",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "details",
+							"value": "{\n  \"name\": \"Test App Script Correlation\",\n  \"description\": \"App with script correlation\",\n  \"isAuthoritative\": false,\n  \"identityType\": \"employee\",\n  \"riskLevel\": \"low\",\n  \"owner\": [],\n  \"businessOwner\": [],\n  \"category\": [],\n  \"complianceLabels\": [],\n  \"scopes\": [],\n  \"department\": null,\n  \"connectorId\": \"ldap-connector\"\n}",
+							"type": "text"
+						},
+						{
+							"key": "connector",
+							"value": "{\n  \"connectorId\": \"ldap-connector\",\n  \"config\": {\n    \"url\": \"ldap://localhost:389\"\n  }\n}",
+							"type": "text"
+						},
+						{
+							"key": "schema",
+							"value": "{\n  \"definitions\": [\n    {\n      \"objectClass\": \"__ACCOUNT__\",\n      \"type\": \"account\",\n      \"displayAttribute\": \"uid\",\n      \"attributes\": [\n        {\n          \"name\": \"uid\",\n          \"type\": \"string\",\n          \"category\": \"core\",\n          \"description\": \"User ID\",\n          \"flags\": [\"REQUIRED\"]\n        }\n      ]\n    }\n  ]\n}",
+							"type": "text"
+						},
+						{
+							"key": "correlation",
+							"value": "{\n  \"mode\": \"script\",\n  \"script\": {\n    \"lang\": \"beanshell\",\n    \"data\": \"return query;\"\n  }\n}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Application - Governance Mappings",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "details",
+							"value": "{\n  \"name\": \"Test App Governance\",\n  \"description\": \"App with governance mappings\",\n  \"isAuthoritative\": true,\n  \"identityType\": \"employee\",\n  \"riskLevel\": \"low\",\n  \"owner\": [],\n  \"businessOwner\": [],\n  \"category\": [],\n  \"complianceLabels\": [],\n  \"scopes\": [],\n  \"department\": null,\n  \"connectorId\": \"ldap-connector\"\n}",
+							"type": "text"
+						},
+						{
+							"key": "connector",
+							"value": "{\n  \"connectorId\": \"ldap-connector\",\n  \"config\": {\n    \"url\": \"ldap://localhost:389\"\n  }\n}",
+							"type": "text"
+						},
+						{
+							"key": "schema",
+							"value": "{\n  \"definitions\": [\n    {\n      \"objectClass\": \"__ACCOUNT__\",\n      \"type\": \"account\",\n      \"displayAttribute\": \"uid\",\n      \"attributes\": [\n        {\n          \"name\": \"uid\",\n          \"type\": \"string\",\n          \"category\": \"core\",\n          \"description\": \"User ID\",\n          \"flags\": [\"REQUIRED\"]\n        },\n        {\n          \"name\": \"mail\",\n          \"type\": \"string\",\n          \"category\": \"contact\",\n          \"description\": \"Email Address\",\n          \"flags\": []\n        }\n      ]\n    }\n  ]\n}",
+							"type": "text"
+						},
+						{
+							"key": "attributeMappings",
+							"value": "{\n  \"attributeMappings\": [\n    {\n      \"sourceAttributeName\": \"mail\",\n      \"targetAttributeName\": \"email\",\n      \"mode\": \"direct\"\n    }\n  ]\n}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Application - Full Complex",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "details",
+							"value": "{\n  \"name\": \"Test App Full\",\n  \"description\": \"App with all policies\",\n  \"isAuthoritative\": true,\n  \"identityType\": \"employee\",\n  \"riskLevel\": \"high\",\n  \"owner\": [],\n  \"businessOwner\": [],\n  \"category\": [],\n  \"complianceLabels\": [],\n  \"scopes\": [],\n  \"department\": null,\n  \"connectorId\": \"ldap-connector\"\n}",
+							"type": "text"
+						},
+						{
+							"key": "connector",
+							"value": "{\n  \"connectorId\": \"ldap-connector\",\n  \"config\": {\n    \"url\": \"ldap://localhost:389\"\n  }\n}",
+							"type": "text"
+						},
+						{
+							"key": "schema",
+							"value": "{\n  \"definitions\": [\n    {\n      \"objectClass\": \"__ACCOUNT__\",\n      \"type\": \"account\",\n      \"displayAttribute\": \"uid\",\n      \"attributes\": [\n        {\n          \"name\": \"uid\",\n          \"type\": \"string\",\n          \"category\": \"core\",\n          \"description\": \"User ID\",\n          \"flags\": [\"REQUIRED\"]\n        },\n        {\n          \"name\": \"mail\",\n          \"type\": \"string\",\n          \"category\": \"contact\",\n          \"description\": \"Email Address\",\n          \"flags\": []\n        }\n      ]\n    }\n  ]\n}",
+							"type": "text"
+						},
+						{
+							"key": "correlation",
+							"value": "{\n  \"mode\": \"attribute\",\n  \"ruleGroup\": {\n    \"combinator\": \"and\",\n    \"rules\": [\n      {\n        \"combinator\": \"or\",\n        \"not\": false,\n        \"rules\": [\n          {\n            \"field\": \"uid\",\n            \"operator\": \"=\",\n            \"valueSource\": \"value\",\n            \"value\": \"test-user\"\n          },\n          {\n            \"field\": \"mail\",\n            \"operator\": \"contains\",\n            \"valueSource\": \"value\",\n            \"value\": \"@example.com\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+							"type": "text"
+						},
+						{
+							"key": "attributeMappings",
+							"value": "{\n  \"attributeMappings\": [\n    {\n      \"sourceAttributeName\": \"mail\",\n      \"targetAttributeName\": \"email\",\n      \"mode\": \"script\",\n  \"script\": {\n    \"lang\": \"beanshell\",\n    \"data\": \"return query;\"\n  }\n    }\n  ]\n}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Applications",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Application By ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications/{{applicationId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications",
+						"{{applicationId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Application Schema Object Types",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications/{{applicationId}}/schema",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications",
+						"{{applicationId}}",
+						"schema"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Application Schema Definitions",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications/{{applicationId}}/schema/{{objectType}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications",
+						"{{applicationId}}",
+						"schema",
+						"{{objectType}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Application",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "details",
+							"value": "{\n  \"name\": \"Updated Test App 1\",\n  \"description\": \"Updated description\",\n  \"authoritative\": true,\n  \"identityType\": \"human\",\n  \"riskLevel\": \"medium\",\n  \"owner\": [],\n  \"businessOwner\": [],\n  \"category\": [],\n  \"complianceLabels\": [],\n  \"scopes\": [],\n  \"department\": null,\n  \"connectorId\": \"ldap-connector\"\n}",
+							"type": "text"
+						},
+						{
+							"key": "connector",
+							"value": "{\n  \"connectorId\": \"ldap-connector\",\n  \"config\": {\n    \"url\": \"ldap://localhost:389\"\n  }\n}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications/{{appId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications",
+						"{{appId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Application",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/applications/{{appId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"applications",
+						"{{appId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Schema Attributes",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "jwt",
+		"jwt": [
+			{
+				"key": "secret",
+				"value": "mySuperSecretKey12345678901234AZERTY123456789",
+				"type": "string"
+			},
+			{
+				"key": "payload",
+				"value": "{\n  \"sub\": \"4bb2c7df-5677-4cd2-a0d1-aad3fa8afe8f\",\n  \"username\": \"imadmin\",\n  \"tenantId\":\"tenant_001\",\n  \"iat\": 1750774924,\n  \"exp\": 9750775824\n}",
+				"type": "string"
+			},
+			{
+				"key": "algorithm",
+				"value": "HS256",
+				"type": "string"
+			},
+			{
+				"key": "isSecretBase64Encoded",
+				"value": false,
+				"type": "boolean"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "headerPrefix",
+				"value": "Bearer",
+				"type": "string"
+			},
+			{
+				"key": "queryParamKey",
+				"value": "token",
+				"type": "string"
+			},
+			{
+				"key": "header",
+				"value": "{}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "tenantId",
+			"value": "tenant-1"
+		},
+		{
+			"key": "appId",
+			"value": ""
+		}
+	]
+}

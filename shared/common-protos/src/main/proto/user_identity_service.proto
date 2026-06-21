@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.common.protos";
+option java_outer_classname = "UserIdentityServiceProto";
+
+package user_identity;
+
+/**
+ * Service for retrieving user and identity information.
+ * Provides endpoints for searching, pagination, and batch lookups.
+ */
+service UserIdentityService {
+  // Search for users and identities with pagination
+  rpc SearchUsersAndIdentities(SearchUsersAndIdentitiesRequest)
+      returns (SearchUsersAndIdentitiesResponse);
+
+  // Batch lookup users and/or identities by their IDs
+  rpc GetUserIdentitiesByIds(GetUserIdentitiesByIdsRequest)
+      returns (GetUserIdentitiesByIdsResponse);
+}
+
+/**
+ * Request for searching users and identities with pagination
+ */
+message SearchUsersAndIdentitiesRequest {
+  string tenant_id = 1; // Required: Tenant ID for multi-tenancy
+  string search_query =
+      2; // Optional: Search term to filter by name/username/email
+  bool include_users = 3; // Include users table results (default: true)
+  bool include_identities =
+      4;                     // Include identities table results (default: true)
+  int32 page = 5;            // Page number (0-based, default: 0)
+  int32 size = 6;            // Page size (default: 20, max: 100)
+  string sort_by = 7;        // Sort field (e.g., "name", "created_at")
+  string sort_direction = 8; // Sort direction: "asc" or "desc"
+}
+
+/**
+ * Response for searching users and identities
+ */
+message SearchUsersAndIdentitiesResponse {
+  repeated UserIdentityInfo content = 1; // List of users/identities
+  int32 page = 2;                        // Current page number (0-based)
+  int32 size = 3;                        // Page size
+  int32 total_elements = 4;              // Total number of matching items
+  int32 total_pages = 5;                 // Total number of pages
+  bool first = 6;                        // Is this the first page
+  bool last = 7;                         // Is this the last page
+  int32 number_of_elements = 8;          // Number of elements in current page
+  bool empty = 9;                        // Is the result empty
+}
+
+/**
+ * Request for batch lookup by IDs
+ */
+message GetUserIdentitiesByIdsRequest {
+  string tenant_id = 1;        // Required: Tenant ID for multi-tenancy
+  repeated string ids = 2;     // List of UUIDs to look up
+  bool include_users = 3;      // Search in users table (default: true)
+  bool include_identities = 4; // Search in identities table (default: true)
+}
+
+/**
+ * Response for batch lookup
+ */
+message GetUserIdentitiesByIdsResponse {
+  repeated UserIdentityInfo items = 1; // List of found users/identities
+}
+
+/**
+ * Combined user/identity information
+ */
+message UserIdentityInfo {
+  string id = 1; // UUID of user or identity
+  string name =
+      2; // Display name (username for users, full name for identities)
+  string type = 3;      // "USER" or "IDENTITY"
+  string email = 4;     // Email address (if available)
+  bool is_active = 5;   // Whether user/identity is active
+  string tenant_id = 6; // Tenant ID
+  int64 created_at = 7; // Creation timestamp (epoch millis)
+}

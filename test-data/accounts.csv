@@ -1,0 +1,46 @@
+uid,username,email,firstName,lastName,department,jobTitle,manager,employeeType,status,groups,createdDate,lastModified
+EMP001,john.mitchell,john.mitchell@company.com,John,Mitchell,IT,IT Director,CEO001,Full-Time,active,GRP-IT-ADMINS|GRP-EXEC-LEADERSHIP|GRP-VPN-REMOTE,2020-03-15,2026-03-12
+EMP002,sarah.chen,sarah.chen@company.com,Sarah,Chen,Engineering,VP Engineering,CEO001,Full-Time,active,GRP-ENG-ARCHITECTS|GRP-EXEC-LEADERSHIP|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS,2019-06-01,2026-03-12
+EMP003,michael.oconnor,michael.oconnor@company.com,Michael,O'Connor,Finance,CFO,CEO001,Full-Time,active,GRP-FIN-CONTROLLERS|GRP-EXEC-LEADERSHIP|GRP-COMPLIANCE-SOX|GRP-SAP-USERS,2018-09-10,2026-03-12
+EMP004,aisha.rahman,aisha.rahman@company.com,Aisha,Rahman,HR,HR Director,CEO001,Full-Time,active,GRP-HR-ADMINS|GRP-EXEC-LEADERSHIP|GRP-VPN-REMOTE,2021-01-20,2026-03-12
+EMP005,david.kowalski,david.kowalski@company.com,David,Kowalski,IT,Senior Systems Administrator,EMP001,Full-Time,active,GRP-IT-ADMINS|GRP-DBA-PROD|GRP-CLOUD-AWS|GRP-CLOUD-AZURE|GRP-VPN-REMOTE,2021-04-12,2026-03-12
+EMP006,maria.santos,maria.santos@company.com,Maria,Santos,IT,DevOps Engineer,EMP001,Full-Time,active,GRP-IT-DEVOPS|GRP-CLOUD-AWS|GRP-JIRA-USERS|GRP-VPN-REMOTE,2022-02-28,2026-03-12
+EMP007,james.williams,james.williams@company.com,James,Williams,IT,Helpdesk Analyst,EMP001,Full-Time,active,GRP-IT-SUPPORT|GRP-SERVICENOW-AGENTS|GRP-VPN-REMOTE,2023-07-01,2026-03-12
+EMP008,yuki.tanaka,yuki.tanaka@company.com,Yuki,Tanaka,IT,Security Engineer,EMP001,Full-Time,active,GRP-SEC-INCIDENT|GRP-IT-ADMINS|GRP-CLOUD-AWS|GRP-VPN-REMOTE,2022-09-15,2026-03-12
+EMP009,carlos.rivera,carlos.rivera@company.com,Carlos,Rivera,Engineering,Senior Backend Developer,EMP002,Full-Time,active,GRP-ENG-DEVELOPERS|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS|GRP-CLOUD-AWS,2020-11-02,2026-03-12
+EMP010,emily.zhang,emily.zhang@company.com,Emily,Zhang,Engineering,Frontend Developer,EMP002,Full-Time,active,GRP-ENG-DEVELOPERS|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS,2023-01-15,2026-03-12
+EMP011,ahmed.hassan,ahmed.hassan@company.com,Ahmed,Hassan,Engineering,QA Lead,EMP002,Full-Time,active,GRP-ENG-QA|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS,2021-08-20,2026-03-12
+EMP012,lisa.nguyen,lisa.nguyen@company.com,Lisa,Nguyen,Engineering,DevOps Engineer,EMP002,Full-Time,active,GRP-IT-DEVOPS|GRP-ENG-DEVELOPERS|GRP-CLOUD-AZURE|GRP-JIRA-USERS,2022-05-10,2026-03-12
+EMP013,robert.anderson,robert.anderson@company.com,Robert,Anderson,Finance,Senior Financial Analyst,EMP003,Full-Time,active,GRP-FIN-ANALYSTS|GRP-SAP-USERS|GRP-COMPLIANCE-SOX,2020-04-01,2026-03-12
+EMP014,priya.patel,priya.patel@company.com,Priya,Patel,Finance,Financial Controller,EMP003,Full-Time,active,GRP-FIN-CONTROLLERS|GRP-FIN-ANALYSTS|GRP-SAP-USERS|GRP-COMPLIANCE-SOX,2019-12-15,2026-03-12
+EMP015,thomas.mueller,thomas.mueller@company.com,Thomas,Mueller,Finance,Internal Auditor,EMP003,Full-Time,active,GRP-FIN-AUDITORS|GRP-COMPLIANCE-SOX|GRP-SAP-USERS,2021-06-01,2026-03-12
+EMP016,jennifer.obi,jennifer.obi@company.com,Jennifer,Obi,HR,Recruiter,EMP004,Full-Time,active,GRP-HR-RECRUITERS|GRP-SERVICENOW-AGENTS,2023-03-20,2026-03-12
+EMP017,kevin.park,kevin.park@company.com,Kevin,Park,HR,Payroll Specialist,EMP004,Full-Time,active,GRP-HR-PAYROLL|GRP-SAP-USERS,2022-01-10,2026-03-12
+EMP018,emma.johnson,emma.johnson@company.com,Emma,Johnson,Sales,Sales Director,CEO001,Full-Time,active,GRP-SALES-MANAGERS|GRP-EXEC-LEADERSHIP|GRP-VPN-REMOTE,2020-07-15,2026-03-12
+EMP019,alex.petrov,alex.petrov@company.com,Alex,Petrov,Sales,Account Executive,EMP018,Full-Time,active,GRP-SALES-REPS|GRP-VPN-REMOTE,2023-09-01,2026-03-12
+EMP020,nina.garcia,nina.garcia@company.com,Nina,Garcia,Sales,Account Executive,EMP018,Full-Time,active,GRP-SALES-REPS|GRP-VPN-REMOTE,2024-01-15,2026-03-12
+EMP021,omar.farouk,omar.farouk@company.com,Omar,Farouk,Marketing,Marketing Manager,CEO001,Full-Time,active,GRP-MKT-CONTENT|GRP-MKT-ANALYTICS|GRP-CONFLUENCE-EDITORS,2021-03-01,2026-03-12
+EMP022,sophie.dubois,sophie.dubois@company.com,Sophie,Dubois,Marketing,Content Specialist,EMP021,Full-Time,active,GRP-MKT-CONTENT|GRP-CONFLUENCE-EDITORS,2023-05-20,2026-03-12
+EMP023,daniel.adams,daniel.adams@company.com,Daniel,Adams,Operations,Operations Manager,CEO001,Full-Time,active,GRP-OPS-LOGISTICS|GRP-OPS-PROCUREMENT|GRP-SAP-USERS,2019-10-01,2026-03-12
+EMP024,rachel.kim,rachel.kim@company.com,Rachel,Kim,Operations,Supply Chain Analyst,EMP023,Full-Time,active,GRP-OPS-LOGISTICS|GRP-SAP-USERS,2022-08-15,2026-03-12
+EMP025,ben.walker,ben.walker@company.com,Ben,Walker,Operations,Procurement Specialist,EMP023,Full-Time,active,GRP-OPS-PROCUREMENT|GRP-SAP-USERS,2023-02-01,2026-03-12
+EMP026,laura.schmidt,laura.schmidt@company.com,Laura,Schmidt,Engineering,Junior Developer,EMP002,Full-Time,active,GRP-ENG-DEVELOPERS|GRP-JIRA-USERS,2025-06-01,2026-03-12
+EMP027,marcus.bell,marcus.bell@company.com,Marcus,Bell,IT,Cloud Engineer,EMP001,Contract,active,GRP-CLOUD-AWS|GRP-CLOUD-AZURE|GRP-VPN-REMOTE,2025-01-15,2026-03-12
+EMP028,fatima.al-sayed,fatima.al-sayed@company.com,Fatima,Al-Sayed,Finance,Junior Analyst,EMP003,Full-Time,active,GRP-FIN-ANALYSTS|GRP-SAP-USERS,2025-09-01,2026-03-12
+EMP029,chris.taylor,chris.taylor@company.com,Chris,Taylor,IT,SAP Basis Admin,EMP001,Full-Time,active,GRP-SAP-ADMINS|GRP-SAP-USERS|GRP-IT-ADMINS,2020-05-01,2026-03-12
+EMP030,hannah.lee,hannah.lee@company.com,Hannah,Lee,Engineering,Platform Engineer,EMP002,Full-Time,active,GRP-ENG-DEVELOPERS|GRP-IT-DEVOPS|GRP-CLOUD-AWS|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS,2021-11-10,2026-03-12
+EMP031,peter.novak,peter.novak@company.com,Peter,Novak,Sales,Sales Engineer,EMP018,Contract,active,GRP-SALES-REPS|GRP-ENG-DEVELOPERS|GRP-JIRA-USERS,2024-06-01,2026-03-12
+EMP032,anna.ivanova,anna.ivanova@company.com,Anna,Ivanova,IT,Security Analyst,EMP001,Full-Time,active,GRP-SEC-INCIDENT|GRP-SERVICENOW-AGENTS|GRP-VPN-REMOTE,2023-10-15,2026-03-12
+EMP033,ryan.clark,ryan.clark@company.com,Ryan,Clark,Engineering,QA Engineer,EMP002,Full-Time,active,GRP-ENG-QA|GRP-JIRA-USERS,2024-03-01,2026-03-12
+EMP034,victoria.wong,victoria.wong@company.com,Victoria,Wong,HR,HR Business Partner,EMP004,Full-Time,active,GRP-HR-ADMINS|GRP-HR-RECRUITERS|GRP-SERVICENOW-AGENTS,2022-04-15,2026-03-12
+EMP035,ian.mcgregor,ian.mcgregor@company.com,Ian,McGregor,IT,DBA,EMP001,Full-Time,active,GRP-DBA-PROD|GRP-CLOUD-AWS|GRP-VPN-REMOTE,2021-02-20,2026-03-12
+EMP036,diana.morales,diana.morales@company.com,Diana,Morales,Marketing,Analytics Specialist,EMP021,Full-Time,active,GRP-MKT-ANALYTICS,2024-07-01,2026-03-12
+EMP037,jack.stewart,jack.stewart@company.com,Jack,Stewart,Engineering,Senior Developer,EMP002,Full-Time,active,GRP-ENG-DEVELOPERS|GRP-ENG-ARCHITECTS|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS|GRP-CLOUD-AWS,2019-08-15,2026-03-12
+EMP038,mei.li,mei.li@company.com,Mei,Li,Finance,Compliance Analyst,EMP003,Full-Time,active,GRP-COMPLIANCE-SOX|GRP-FIN-AUDITORS,2022-11-01,2026-03-12
+EMP039,sam.brooks,sam.brooks@company.com,Sam,Brooks,Operations,Warehouse Manager,EMP023,Full-Time,active,GRP-OPS-LOGISTICS|GRP-SAP-USERS,2020-12-01,2026-03-12
+EMP040,olivia.green,olivia.green@company.com,Olivia,Green,HR,Learning & Development,EMP004,Full-Time,active,GRP-HR-ADMINS|GRP-CONFLUENCE-EDITORS,2023-08-15,2026-03-12
+EMP041,nathan.wright,nathan.wright@company.com,Nathan,Wright,Engineering,Intern,EMP002,Intern,active,,2026-02-01,2026-03-12
+EMP042,grace.campbell,grace.campbell@company.com,Grace,Campbell,Finance,Intern,EMP003,Intern,active,,2026-02-15,2026-03-12
+EMP043,derek.foster,derek.foster@company.com,Derek,Foster,IT,Network Engineer,EMP001,Full-Time,disabled,GRP-IT-ADMINS|GRP-VPN-REMOTE,2019-05-01,2026-03-01
+EMP044,karen.hill,karen.hill@company.com,Karen,Hill,Sales,Account Manager,EMP018,Full-Time,disabled,GRP-SALES-REPS|GRP-SALES-MANAGERS,2020-01-15,2026-02-15
+EMP045,leon.fischer,leon.fischer@company.com,Leon,Fischer,Engineering,Senior Developer,EMP002,Full-Time,active,GRP-ENG-DEVELOPERS|GRP-ENG-ARCHITECTS|GRP-JIRA-USERS|GRP-CONFLUENCE-EDITORS,2020-06-01,2026-03-12

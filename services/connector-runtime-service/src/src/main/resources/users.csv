@@ -1,0 +1,6 @@
+uid,GIVEN_NAME,SURNAME,email_address,account_status
+jdoe,John,Doe,JDOE@example.com,active
+asmith,Alice,Smith2,asmith@example.com,disabled
+asmith2,Alice,Smith3,asmith@example.com,disabled
+asmith3,Alice,Smith4,asmith@example.com,disabled
+asmith4,Alice,Smith5,asmith@example.com,disabled

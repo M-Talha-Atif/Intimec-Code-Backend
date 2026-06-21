@@ -1,0 +1,125 @@
+services:
+  kafka:
+    image: bitnamilegacy/kafka:3.2.3
+    container_name: kafka
+    ports:
+      # This is the EXTERNAL port for your Spring Boot app on the host
+      - "9092:9092"
+      # The internal port 29092 does NOT need to be exposed to the host
+    restart: unless-stopped
+    environment:
+      # === KRAFT settings (unchanged) ===
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      # TWO listeners: INTERNAL for container-to-container, EXTERNAL for host-to-container
+      - KAFKA_CFG_LISTENERS=INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      
+      - dokploy-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9093:8080"
+    restart: unless-stopped
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+      - KAFKA_CLUSTERS_0_METRICS_PORT=9997
+    depends_on:
+      - kafka
+    networks:
+      - dokploy-network
+
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=!Admin123456
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:9200/_index_template/log-template",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    networks:
+      
+      - dokploy-network
+
+  init-index-template:
+    image: curlimages/curl:latest
+    environment:
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+    depends_on:
+      - opensearch
+    entrypoint: ["/bin/sh", "/init-opensearch.sh"]
+    volumes:
+      - ../../config/opensearch/opensearch-template.json:/index-template.json:ro
+      - ../../config/opensearch/init.sh:/init-opensearch.sh:ro
+    networks:
+      
+      - dokploy-network
+  zero:
+    image: dgraph/dgraph:latest
+    container_name: dgraph-zero
+    ports:
+      - "5080:5080"
+      - "6080:6080"
+    restart: unless-stopped
+    volumes:
+      - dgraph:/dgraph
+    command: dgraph zero --my=zero:5080
+
+  alpha:
+    image: dgraph/dgraph:latest
+    container_name: dgraph-alpha
+    ports:
+      - "8082:8080"  # changed from 8080 to 8082 to avoid conflict
+      - "9080:9080"
+    restart: unless-stopped
+    volumes:
+      - dgraph:/dgraph
+    command: dgraph alpha --my=alpha:7080 --zero=zero:5080 --security "whitelist=0.0.0.0/0"
+
+  ratel:
+    image: dgraph/ratel:latest
+    container_name: dgraph-ratel
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    depends_on:
+      - alpha
+
+volumes:
+  kafka_data:
+    driver: local
+  dgraph:
+    driver: local
+
+networks:
+  dokploy-network:
+    external: true

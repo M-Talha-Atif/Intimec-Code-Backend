@@ -1,0 +1,126 @@
+{
+  "Configuration": {
+    "status": "WARN",
+    "name": "identityServiceConfig",
+    "properties": {
+      "property": [
+        {
+          "name": "app-name",
+          "value": "identity-service"
+        }
+      ]
+    },
+    "Appenders": {
+      "CONSOLE": {
+        "name": "CONSOLE",
+        "target": "SYSTEM_OUT",
+        "PatternLayout": {
+          "pattern": "%highlight{%d{HH:mm:ss.SSS} [%15.15t] %-5level %c{1} - %msg%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=green, DEBUG=cyan, TRACE=blue}"
+        }
+      },
+      "UnifiedHttpAppender": {
+        "type": "UnifiedHttpAppender",
+        "name": "UnifiedHttpAppender",
+        "endpoint": "${env:OPENSEARCH_URL:-http://localhost:9200}/main-logs/_doc",
+        "username": "${env:OPENSEARCH_USERNAME:-admin}",
+        "password": "${env:OPENSEARCH_PASSWORD:-!Admin123456}",
+        "JsonTemplateLayout": {
+          "eventTemplateUri": "classpath:log-template.json"
+        }
+      }
+    },
+    "Loggers": {
+      "Root": {
+        "level": "INFO",
+        "AppenderRef": [
+          {
+            "ref": "CONSOLE"
+          },
+          {
+            "ref": "UnifiedHttpAppender"
+          }
+        ]
+      },
+      "Logger": [
+        {
+          "name": "org.springframework.security",
+          "level": "WARN",
+          "additivity": false,
+          "AppenderRef": [
+            {
+              "ref": "CONSOLE"
+            }
+          ]
+        },
+        {
+          "name": "HttpURLConnection",
+          "level": "WARN"
+        },
+        {
+          "name": "sun.net.www.protocol.http.HttpURLConnection",
+          "level": "WARN"
+        },
+        {
+          "name": "org.springframework.security.saml2",
+          "level": "OFF"
+        },
+        {
+          "name": "org.springframework.security.oauth2",
+          "level": "WARN"
+        },
+        {
+          "name": "org.hibernate",
+          "level": "ERROR"
+        },
+        {
+          "name": "org.hibernate.SQL",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type.descriptor.sql",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type.descriptor.sql.BasicBinder",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type.descriptor.sql.BasicExtractor",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.engine.jdbc.spi.SqlExceptionHelper",
+          "level": "OFF"
+        },
+        {
+          "name": "org.springframework.orm.jpa",
+          "level": "ERROR"
+        },
+        {
+          "name": "org.springframework.transaction",
+          "level": "ERROR"
+        },
+        {
+          "name": "org.opensaml",
+          "level": "OFF"
+        },
+        {
+          "name": "org.apache.kafka",
+          "level": "OFF"
+        },
+        {
+          "name": "io.dgraph",
+          "level": "WARN"
+        },
+        {
+          "name": "io.grpc",
+          "level": "WARN"
+        }
+      ]
+    }
+  }
+}

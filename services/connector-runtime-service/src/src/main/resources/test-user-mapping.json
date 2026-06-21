@@ -1,0 +1,55 @@
+{
+    "targetType": "http://mycompany.com/dal/model/test-user-v1#User",
+    "attributes": [
+        {
+            "source": "__UID__",
+            "target": "uid",
+            "transform": "direct"
+        },
+        {
+            "source": "EMAIL",
+            "target": "email",
+            "transform": "lowercase"
+        },
+        {
+            "target": "accountType",
+            "transform": "constant",
+            "value": "TestAccount"
+        },
+        {
+            "source": "groups",
+            "target": "memberOf",
+            "transform": "direct"
+        },
+        {
+            "target": "derivedAttributes",
+            "transform": "script",
+            "language": "graal.js",
+            "scriptPath": "classpath:test-status-transform.js"
+        },
+        {
+            "target": "composedPrincipalName",
+            "transform": "script",
+            "language": "graal.js",
+            "scriptPath": "classpath:principal-name-transform.js"
+        },
+        {
+            "target": "inlineGreeting",
+            "transform": "script",
+            "language": "graal.js",
+            "scriptContent": "(() => { const name = sourceAttributes.get('GIVEN_NAME'); return `Hello, ${name}! Welcome to the platform.`; })();"
+        },
+        {
+            "target": "departmentCode",
+            "transform": "script",
+            "language": "groovy",
+            "scriptPath": "classpath:department-transform.groovy"
+        },
+        {
+            "target": "seniorityScore",
+            "transform": "script",
+            "language": "beanshell",
+            "scriptPath": "classpath:seniority-transform.bsh"
+        }
+    ]
+}

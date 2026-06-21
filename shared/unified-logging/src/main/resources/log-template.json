@@ -1,0 +1,17 @@
+{
+  "@timestamp":    { "$resolver": "timestamp", "field": "epochMillis" },
+  "log.level":     { "$resolver": "level", "field": "name" },
+  "log.logger":    { "$resolver": "logger", "field": "name" },
+  "thread":        { "$resolver": "thread", "field": "name" },
+  "message":       { "$resolver": "message", "field": "message" },
+
+  "id":            { "$resolver": "message", "field": "id", "when": { "exists": true } },
+  "source":        { "$resolver": "message", "field": "source", "when": { "exists": true } },
+  "microservice":  { "$resolver": "message", "field": "microservice", "when": { "exists": true } },
+  "trace.id":      { "$resolver": "message", "field": "correlationId", "when": { "exists": true } },
+  "category":      { "$resolver": "message", "field": "category", "when": { "exists": true } },
+  "object.type":   { "$resolver": "message", "field": "objectType", "when": { "exists": true } },
+  "object.id":     { "$resolver": "message", "field": "objectId", "when": { "exists": true } },
+  "retryable":     { "$resolver": "message", "field": "retryable", "when": { "exists": true } },
+  "details":       { "$resolver": "message", "field": "details", "when": { "exists": true } }
+}

@@ -1,0 +1,434 @@
+{
+	"info": {
+		"_postman_id": "482b039c-7987-434e-be04-f4260d05cdf5",
+		"name": "Governance Policy API",
+		"description": "Collection for testing Identity Governance Policy endpoints (Correlations, Mappings, Source Priorities)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "50228648"
+	},
+	"item": [
+		{
+			"name": "Get Priorities",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/priorities/policies/{{identityType}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"priorities",
+						"policies",
+						"{{identityType}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Priorities",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sourcePriorities\": [\n        {\n            \"targetAttribute\": \"email\",\n            \"priorities\": [\n                {\n                    \"resourceId\": \"{{resourceId}}\",\n                    \"sourceAttribute\": \"mail\",\n                    \"priority\": 1\n                }\n            ]\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/priorities/policies/{{identityType}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"priorities",
+						"policies",
+						"{{identityType}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Policy (Identity Type)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Policy (Resource)",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"resourceId\": \"{{resourceId}}\",\n    \"correlationRules\": [],\n    \"attributeMappings\": []\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Attribute Mappings",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}/attribute/mappings",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}",
+						"attribute",
+						"mappings"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Correlation Rules",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}/correlation/rules",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}",
+						"correlation",
+						"rules"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Policy (Identity Type)",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Correlation Rule",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Updated Rule\",\n    \"priority\": 1,\n    \"conditions\": []\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}/correlation/rules/{{ruleId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}",
+						"correlation",
+						"rules",
+						"{{ruleId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Attribute Mapping",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sourceAttribute\": \"mail\",\n    \"targetAttribute\": \"email\",\n    \"mode\": \"direct\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}/attribute/mappings/{{mappingId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}",
+						"attribute",
+						"mappings",
+						"{{mappingId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Correlation Rule",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}/correlation/rules/{{ruleId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}",
+						"correlation",
+						"rules",
+						"{{ruleId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Attribute Mapping",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-Tenant-ID",
+						"value": "{{tenantId}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/identity/mapping/policies/{{identityType}}/attribute/mappings/{{mappingId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"identity",
+						"mapping",
+						"policies",
+						"{{identityType}}",
+						"attribute",
+						"mappings",
+						"{{mappingId}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "jwt",
+		"jwt": [
+			{
+				"key": "payload",
+				"value": "{\n  \"sub\": \"4bb2c7df-5677-4cd2-a0d1-aad3fa8afe8f\",\n  \"username\": \"imadmin\",\n  \"tenantId\":\"tenant_001\",\n  \"iat\": 1750774924,\n  \"exp\": 9750775824\n}",
+				"type": "string"
+			},
+			{
+				"key": "secret",
+				"value": "mySuperSecretKey12345678901234AZERTY123456789",
+				"type": "string"
+			},
+			{
+				"key": "algorithm",
+				"value": "HS256",
+				"type": "string"
+			},
+			{
+				"key": "isSecretBase64Encoded",
+				"value": false,
+				"type": "boolean"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "headerPrefix",
+				"value": "Bearer",
+				"type": "string"
+			},
+			{
+				"key": "queryParamKey",
+				"value": "token",
+				"type": "string"
+			},
+			{
+				"key": "header",
+				"value": "{}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

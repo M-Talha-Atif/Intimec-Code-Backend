@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="DEBUG">
+    <Properties>
+        <!-- Spring-style property fallbacks using log4j2's syntax -->
+        <Property name="opensearch.enabled">${env:UNIFIED_LOGGING_OPENSEARCH_ENABLED:-true}</Property>
+        <Property name="opensearch.host">${env:UNIFIED_LOGGING_OPENSEARCH_HOST:-localhost}</Property>
+        <Property name="opensearch.port">${env:UNIFIED_LOGGING_OPENSEARCH_PORT:-9200}</Property>
+        <Property name="opensearch.protocol">${env:UNIFIED_LOGGING_OPENSEARCH_PROTOCOL:-http}</Property>
+        <Property name="opensearch.user">${env:UNIFIED_LOGGING_OPENSEARCH_USERNAME:-admin}</Property>
+        <Property name="opensearch.password">${env:UNIFIED_LOGGING_OPENSEARCH_PASSWORD:-!Admin123456}</Property>
+        <Property name="opensearch.index">${env:UNIFIED_LOGGING_OPENSEARCH_INDEX:-unified-logs-%d{yyyy-MM-dd}}</Property>
+    </Properties>
+
+    <Appenders>
+
+        <!-- Console logger -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%style{%d{HH:mm:ss.SSS}}{black} %highlight{%-5level}{FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan, TRACE=blue} %style{[%t]}{magenta} %style{%c{1.}}{cyan} - %msg%n" />
+        </Console>
+
+        <UnifiedHttpAppender name="UnifiedHttpAppender" endpoint="http://localhost:9200/main-logs/_doc"
+                        username="admin"
+                         password="!Admin123456">
+            <JsonTemplateLayout eventTemplateUri="classpath:log-template.json"/>
+        </UnifiedHttpAppender>
+
+    </Appenders>
+
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="UnifiedHttpAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>

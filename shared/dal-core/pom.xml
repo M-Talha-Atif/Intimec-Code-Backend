@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+    <groupId>com.aidentx.dal</groupId>
+	<artifactId>dal-core</artifactId>
+	<version>1.0.0</version>
+	<name>dal-core</name>
+	<description>The Translation Layer for the Identity and Data Aggregation Platform.</description>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>17</java.version>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<!-- Use a consistent version for all GraalVM artifacts -->
+		<graalvm.version>24.2.2</graalvm.version>
+	</properties>
+	<dependencies>
+		<!-- Dependency on the ConnId framework to understand ConnectorObject -->
+		<dependency>
+			<groupId>net.tirasa.connid</groupId>
+			<artifactId>connector-framework</artifactId>
+			<version>1.6.0.1</version>
+		</dependency>
+		
+		<!-- The API Contract Library (provides generated gRPC stubs) -->
+		<dependency>
+            <groupId>com.aidentx.dal</groupId>
+			<artifactId>common-protos</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+		<dependency>
+            <groupId>com.aidentx.iam</groupId>
+			<artifactId>iam-events</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+		<dependency>
+            <groupId>com.aidentx.iam</groupId>
+			<artifactId>iam-dtos</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+		<!-- Jackson for handling the JSON canonical model and mapping configuration -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.17.1</version>
+		</dependency>
+
+		<!--
+		  GraalJS dependencies for high-performance JavaScript execution.
+		  Replaces the Rhino dependency.
+		-->
+		<dependency>
+			<groupId>org.graalvm.js</groupId>
+			<artifactId>js</artifactId>
+			<version>${graalvm.version}</version>
+			<type>pom</type>
+		</dependency>
+
+		<dependency>
+			<groupId>org.graalvm.polyglot</groupId>
+			<artifactId>polyglot</artifactId>
+			<version>${graalvm.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.graalvm.js</groupId>
+			<artifactId>js-scriptengine</artifactId>
+			<version>${graalvm.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.graalvm.sdk</groupId>
+			<artifactId>graal-sdk</artifactId>
+			<version>${graalvm.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.groovy</groupId>
+			<artifactId>groovy-jsr223</artifactId>
+			<version>4.0.28</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.beanshell</groupId>
+			<artifactId>bsh</artifactId>
+			<version>2.0b5</version>
+		</dependency>
+
+		<dependency>
+            <groupId>com.aidentx.logging</groupId>
+			<artifactId>unified-logging-starter</artifactId>
+			<version>1.0.0</version>
+			<scope>provided</scope>			<!-- Make optional for library consumers -->
+		</dependency>
+
+		<!-- Spring Context for @Service annotation -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>6.2.9</version>
+			<scope>provided</scope>			<!-- Make optional for library consumers -->
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.14.0</version>
+				<configuration>
+					<release>${java.version}</release>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

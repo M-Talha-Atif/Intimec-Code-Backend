@@ -1,0 +1,488 @@
+services:
+  core-service:
+    build:
+      context: ../..
+      dockerfile: services/core-service/Dockerfile
+    container_name: core-service
+    restart: unless-stopped
+    ports:
+      - "8091:8091"  # HTTP port (corrected from 8091)
+      - "9095:9095"  # gRPC port
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - GATEWAY_CORE_SERVICE_URL=http://core-service:8091
+      - GATEWAY_AUTH_SERVICE_URL=http://auth-service:8090
+      - GATEWAY_WORKFLOW_SERVICE_URL=http://workflows-service:8098
+      - GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL=http://application-permissions-service:8095
+      - GATEWAY_CONNECTOR_RUNTIME_SERVICE_URL=http://connector-runtime-service:8093
+      - GATEWAY_CONFIGURATION_SERVICE_URL=http://configuration-service:8092
+      - GATEWAY_ACCESS_PORTAL_SERVICE_URL=http://access-portal-service:8099
+      - GATEWAY_IDENTITY_SERVICE_URL=http://identity-service:8094
+      - GATEWAY_LLM_SERVICE_URL=http://llm-service:8097
+      - GATEWAY_TASK_MANAGEMENT_SERVICE_URL=http://task-management-service:8096
+      - API_GATEWAY_URL=http://api-gateway:8081
+      - GATEWAY_CONFIGURATION_SERVICE_URL=http://configuration-service:8092
+      - CONFIG_GRPC_ADDRESS=dns:///configuration-service:9091
+      - WORKFLOWS_SERVICE_URL=http://workflows-service:8098
+      - APPLICATION_PERMISSIONS_SERVICE_URL=http://application-permissions-service:8095
+      - TASK_MANAGEMENT_SERVICE_URL=http://task-management-service:8096
+      - CONNECTOR_GRPC_ADDRESS=dns:///connector-runtime-service:9094
+      - IDENTITIES_GRPC_ADDRESS=dns:///identity-service:9096
+      - APP_PERMISSIONS_GRPC_ADDRESS=dns:///application-permissions-service:8001
+      - DGRAPH_HOSTS=dgraph:9080
+      - GRPC_SERVER_PORT=9095
+      - CONNECTOR_FILE_UPLOAD_DIRECTORY=/app/connector-data
+      - SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=50MB
+      - SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=50MB
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "core-service-storage:/app/storage"
+      - "connector-data:/app/connector-data"
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+    networks:
+      - dokploy-network
+
+  task-management-service:
+    build:
+      context: ../../
+      dockerfile: services/task-management-service/Dockerfile
+    container_name: task-management-service
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - GRPC_CORE_SERVICE_HOST=core-service
+      - GRPC_CORE_SERVICE_PORT=9095
+      - GRPC_IDENTITY_SERVICE_HOST=identity-service
+      - GRPC_IDENTITY_SERVICE_PORT=9096
+      - GRPC_CONNECTOR_RUNTIME_SERVICE_HOST=connector-runtime-service
+      - GRPC_CONNECTOR_RUNTIME_SERVICE_PORT=9094
+      - GRPC_AUTH_SERVICE_HOST=auth-service
+      - GRPC_AUTH_SERVICE_PORT=8002
+      - OPENSEARCH_URL=http://opensearch:9200
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8096:8096"
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+
+  configuration-service:
+    build:
+      context: ../..
+      dockerfile: services/configuration-service/Dockerfile
+    container_name: configuration-service
+    restart: unless-stopped
+    ports:
+      - "8092:8092" # Expose REST port
+      - "9091:9091" # Expose gRPC port
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      # Use environment variables for sensitive data
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - ENCRYPTION_MASTER_KEY=YourSuperSecretAndLongKeyGoesHere_AtLeast32Chars
+      - ENCRYPTION_SALT=a-unique-salt-for-your-auth-serviceice
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "configuration-service-storage:/app/storage"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8092/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - dokploy-network
+
+  connector-runtime-service:
+    build:
+      context: ../..
+      dockerfile: services/connector-runtime-service/Dockerfile
+    container_name: connector-runtime-service
+    restart: unless-stopped
+    ports:
+      - "8093:8093" # Expose REST port
+      - "9094:9094" # Expose gRPC port
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      # Use environment variables for sensitive data
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - CONNECTOR_DIRECTORY=/app/jars
+      - CONNECTOR_FILE_UPLOAD_DIRECTORY=/app/connector-data
+    volumes:
+      - connector-data:/app/connector-data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dokploy-network
+
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: services/auth-service/Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    ports:
+      - "8090:8090"  # HTTP port
+      - "8002:8002"  # gRPC port
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - CONFIG_GRPC_ADDRESS=dns:///configuration-service:9091
+      - GRPC_SERVER_PORT=8002
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:8090/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - dokploy-network
+
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    labels:
+      # Traefik labels to forward real client IP
+      - "traefik.http.middlewares.api-gateway-ipallowlist.ipwhitelist.ipstrategy.depth=1"
+      - "traefik.http.middlewares.api-gateway-headers.headers.customrequestheaders.X-Forwarded-For=$$remote_addr"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - GATEWAY_CORE_SERVICE_URL=http://core-service:8091
+      - GATEWAY_AUTH_SERVICE_URL=http://auth-service:8090
+      - GATEWAY_AUTH_SERVICE_WS_URL=ws://auth-service:8090
+      - GATEWAY_IDENTITY_SERVICE_URL=http://identity-service:8094
+      - GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL=http://application-permissions-service:8095
+      - GATEWAY_LLM_SERVICE_URL=http://llm-service:8097
+      - GATEWAY_TASK_MANAGEMENT_SERVICE_URL=http://task-management-service:8096
+      - GATEWAY_WORKFLOW_SERVICE_URL=http://workflows-service:8098
+      - GATEWAY_ACCESS_PORTAL_SERVICE_URL=http://access-portal-service:8099
+      - OPENSEARCH_URL=http://opensearch:9200
+      - GATEWAY_CONFIGURATION_SERVICE_URL=http://configuration-service:8092
+      - GRPC_APPLICATION_PERMISSIONS_SERVICE_ADDRESS=dns:///application-permissions-service:8001
+      - GRPC_AUTH_SERVICE_ADDRESS=dns:///auth-service:8002
+      - MANAGEMENT_METRICS_ENABLE_PROCESSOR=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - dokploy-network
+
+  identity-service:
+    build:
+      context: ../..
+      dockerfile: services/identity-service/Dockerfile
+    container_name: identity-service
+    restart: unless-stopped
+    ports:
+      - "8094:8094" # Expose REST port
+      - "9096:9096" # Expose gRPC port
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=15
+      - SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=30000
+      - SPRING_PROFILES_ACTIVE=dev
+
+      # Use environment variables for sensitive data
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec?stringtype=unspecified
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+
+      # Messaging / search / graph
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - DGRAPH_HOSTS=host.docker.internal:9080
+      - DGRAPH_DATABASE=default
+
+      # Service URLs
+      - GATEWAY_IDENTITY_SERVICE_URL=http://identity-service:8094
+      - API_GATEWAY_URL=http://api-gateway:8081
+
+      # gRPC
+      - GRPC_SERVER_PORT=9096
+      - AUTH_GRPC_ADDRESS=dns:///auth-service:8002
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dokploy-network
+
+  application-permissions-service:
+    build:
+      context: ../..
+      dockerfile: services/application-permissions-service/Dockerfile
+    container_name: application-permissions-service
+    restart: unless-stopped
+    ports:
+      - "8095:8095"  # HTTP port
+      - "8001:8001"  # gRPC port
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - API_GATEWAY_URL=http://api-gateway:8081
+      - AUTH_GRPC_ADDRESS=dns:///auth-service:8002
+      - CONFIG_GRPC_ADDRESS=dns:///configuration-service:9091
+      - CONNECTOR_GRPC_ADDRESS=dns:///connector-runtime-service:9094
+      - IDENTITIES_GRPC_ADDRESS=dns:///identity-service:9096
+      - WORKFLOWS_SERVICE_URL=http://workflows-service:8098
+      - DGRAPH_HOSTS=dgraph:9080
+      - GRPC_SERVER_PORT=8001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      auth-service:
+        condition: service_started
+      configuration-service:
+        condition: service_healthy
+      # connector-runtime-service:
+      #   condition: service_started
+      identity-service:
+        condition: service_started
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:8095/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - dokploy-network
+
+  llm-service:
+    build:
+      context: ../..
+      dockerfile: services/llm-service/Dockerfile
+    container_name: llm-service
+    restart: unless-stopped
+    ports:
+      - "8097:8097"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx1g -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dmanagement.metrics.system.processor.enabled=false
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - SPRING_DATASOURCE_DRIVER=org.postgresql.Driver
+      - SPRING_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_FLYWAY_ENABLED=false
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - API_GATEWAY_URL=http://api-gateway:8081
+      - GATEWAY_LLM_SERVICE_URL=http://llm-service:8097
+      - GRPC_CONFIGURATION_SERVICE_HOST=configuration-service
+      - GRPC_CONFIGURATION_SERVICE_PORT=9091
+      - MANAGEMENT_METRICS_SYSTEM_PROCESSOR_ENABLED=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:8097/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - dokploy-network
+
+  workflows-service:
+    build:
+      context: ../..
+      dockerfile: services/workflows-service/Dockerfile
+    container_name: workflows-service
+    restart: unless-stopped
+    ports:
+      - "8098:8098"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev,resilience
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,circuitbreakers,circuitbreakerevents,retries,retryevents
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
+      - SPRING_FLYWAY_ENABLED=false
+      - API_GATEWAY_URL=http://api-gateway:8081
+      - GRPC_IDENTITY_SERVICE_HOST=identity-service
+      - GRPC_IDENTITY_SERVICE_PORT=9096
+      - GRPC_USER_SERVICE_HOST=auth-service
+      - GRPC_USER_SERVICE_PORT=8002
+      - GRPC_PERMISSIONS_SERVICE_HOST=application-permissions-service
+      - GRPC_PERMISSIONS_SERVICE_PORT=8001
+      - GRPC_CLIENT_IDENTITY-SERVICE_ADDRESS=dns:///identity-service:9096
+      - GRPC_CLIENT_AUTH-SERVICE_ADDRESS=dns:///auth-service:8002
+      - GRPC_CLIENT_CORE-SERVICE_ADDRESS=dns:///core-service:9095
+      - GRPC_CLIENT_APPLICATION-PERMISSIONS-SERVICE_ADDRESS=dns:///application-permissions-service:8001
+      - GRPC_CLIENT_CONFIGURATION-SERVICE_ADDRESS=dns:///configuration-service:9091
+      - IDENTITY_SERVICE_REST_URL=http://identity-service:8094
+      - CORE_SERVICE_REST_URL=http://core-service:8091
+      - AUTH_SERVICE_URL=http://auth-service:8090
+      - KAFKA_TOPIC_USER_NOTIFICATIONS=user-notifications
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:8098/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - dokploy-network
+
+  access-portal-service:
+    build:
+      context: ../..
+      dockerfile: services/access-portal-service/Dockerfile
+    container_name: access-portal-service
+    restart: unless-stopped
+    ports:
+      - "8099:8099"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/intimec
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=0;ZA9V{2`2Hu
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
+      - SPRING_FLYWAY_ENABLED=false
+      - IDENTITY_SERVICE_REST_URL=http://identity-service:8094
+      - AUTH_SERVICE_REST_URL=http://auth-service:8090
+      - PERMISSIONS_SERVICE_REST_URL=http://application-permissions-service:8095
+      - API_GATEWAY_URL=http://api-gateway:8081
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=!Admin123456
+      - GRPC_IDENTITY_SERVICE_HOST=identity-service
+      - GRPC_IDENTITY_SERVICE_PORT=9096
+      - GRPC_USER_SERVICE_HOST=auth-service
+      - GRPC_USER_SERVICE_PORT=8002
+      - GRPC_CLIENT_IDENTITY-SERVICE_ADDRESS=dns:///identity-service:9096
+      - GRPC_CLIENT_AUTH-SERVICE_ADDRESS=dns:///auth-service:8002
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dokploy-network
+
+volumes:
+  kafka_data:
+    driver: local
+  core-service-storage:
+    driver: local
+  configuration-service-storage:
+    driver: local
+  connector-data:
+    driver: local
+
+networks:
+  dokploy-network:
+    external: true

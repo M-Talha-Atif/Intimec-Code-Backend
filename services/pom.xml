@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 1. Inherit from the top-level aggregator POM -->
+    <parent>
+        <groupId>com.aidentx</groupId>
+        <artifactId>backend-aggregator</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 2. Define the coordinates for this module -->
+    <artifactId>services-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Services Parent</name>
+    <description>Parent and aggregator for all microservices.</description>
+
+    <!-- 3. List all microservice sub-modules -->
+    <modules>
+        <module>api-gateway/src</module>
+        <module>application-permissions-service/src</module>
+        <module>auth-service/src</module>
+        <module>configuration-service/src</module>
+        <module>connector-runtime-service/src</module>
+        <module>core-service/src</module>
+        <module>llm-service/src</module>
+        <module>identity-service/src</module>
+        <module>task-management-service/src</module>
+        <module>workflows-service</module>
+        <module>access-portal-service</module>
+    </modules>
+
+</project>

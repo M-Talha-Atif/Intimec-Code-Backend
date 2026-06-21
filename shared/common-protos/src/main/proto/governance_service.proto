@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.governance;
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.governance";
+option java_outer_classname = "GovernanceServiceProto";
+
+// A service for querying canonical governance objects like Roles and
+// Entitlements.
+service GovernanceService {
+  // Retrieves a single Business Role by its UUID.
+  rpc GetRoleById(GetByIdRequest) returns (RoleMessage);
+
+  // Retrieves a single Technical Entitlement by its UUID.
+  rpc GetEntitlementById(GetByIdRequest) returns (EntitlementMessage);
+}
+
+// A generic request to get an object by its UUID.
+message GetByIdRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+// Represents a Business Role.
+message RoleMessage {
+  string id = 1;
+  string tenant_id = 2;
+  string display_name = 3;
+  // Contains the list of canonical UUIDs for the included entitlements.
+  repeated string included_entitlement_ids = 4;
+}
+
+// Represents a Technical Entitlement.
+message EntitlementMessage {
+  string id = 1;
+  string tenant_id = 2;
+  string display_name = 3;
+  string resource_id = 4;
+  string source_uid = 5;
+}

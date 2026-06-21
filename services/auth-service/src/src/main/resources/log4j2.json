@@ -1,0 +1,156 @@
+{
+  "Configuration": {
+    "status": "WARN",
+    "name": "AuthServiceUnifiedConfig",
+    "properties": {
+      "property": [
+        {
+          "name": "app-name",
+          "value": "auth-service"
+        }
+      ]
+    },
+    "Appenders": {
+      "CONSOLE": {
+        "name": "CONSOLE",
+        "target": "SYSTEM_OUT",
+        "PatternLayout": {
+          "pattern": "%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %c{1} - %msg%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan, TRACE=blue}"
+        }
+      },
+      "UnifiedHttpAppender": {
+        "type": "UnifiedHttpAppender",
+        "name": "UnifiedHttpAppender",
+        "endpoint": "${env:OPENSEARCH_URL:-http://localhost:9200}/main-logs/_doc",
+        "username": "${env:OPENSEARCH_USERNAME:-admin}",
+        "password": "${env:OPENSEARCH_PASSWORD:-!Admin123456}",
+        "JsonTemplateLayout": {
+          "eventTemplateUri": "classpath:log-template.json"
+        }
+      }
+    },
+    "Loggers": {
+      "Root": {
+        "level": "INFO",
+        "AppenderRef": [
+          {
+            "ref": "CONSOLE"
+          },
+          {
+            "ref": "UnifiedHttpAppender"
+          }
+        ]
+      },
+      "Logger": [
+        {
+          "name": "org.springframework",
+          "level": "WARN"
+        },
+        {
+          "name": "org.hibernate",
+          "level": "WARN"
+        },
+        {
+          "name": "com.zaxxer.hikari",
+          "level": "INFO"
+        },
+        {
+          "name": "org.hibernate.type",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type.descriptor.sql",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type.descriptor.sql.BasicBinder",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.type.descriptor.sql.BasicExtractor",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.engine.jdbc.spi.SqlExceptionHelper",
+          "level": "WARN"
+        },
+        {
+          "name": "org.springframework.orm.jpa",
+          "level": "WARN"
+        },
+        {
+          "name": "org.springframework.transaction",
+          "level": "WARN"
+        },
+        {
+          "name": "org.opensaml",
+          "level": "OFF"
+        },
+        {
+          "name": "org.springframework.security.saml2",
+          "level": "OFF"
+        },
+        {
+          "name": "org.springframework.security.saml2.provider",
+          "level": "OFF"
+        },
+        {
+          "name": "org.springframework.boot.autoconfigure.jdbc",
+          "level": "INFO"
+        },
+        {
+          "name": "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
+          "level": "INFO"
+        },
+        {
+          "name": "org.springframework.boot.autoconfigure.orm.jpa",
+          "level": "INFO"
+        },
+        {
+          "name": "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
+          "level": "INFO"
+        },
+        {
+          "name": "org.springframework.jdbc.datasource",
+          "level": "INFO"
+        },
+        {
+          "name": "org.springframework.jdbc.core.JdbcTemplate",
+          "level": "WARN"
+        },
+        {
+          "name": "org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator",
+          "level": "WARN"
+        },
+        {
+          "name": "org.springframework.dao",
+          "level": "WARN"
+        },
+        {
+          "name": "org.postgresql",
+          "level": "WARN"
+        },
+        {
+          "name": "org.hibernate.SQL",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.orm.jdbc.bind",
+          "level": "OFF"
+        },
+        {
+          "name": "org.hibernate.orm.jdbc.extract",
+          "level": "OFF"
+        },
+        {
+          "name": "HttpURLConnection",
+          "level": "WARN"
+        },
+        {
+          "name": "sun.net.www.protocol.http.HttpURLConnection",
+          "level": "WARN"
+        }
+      ]
+    }
+  }
+}

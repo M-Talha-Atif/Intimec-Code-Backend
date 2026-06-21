@@ -1,0 +1,770 @@
+openapi: 3.0.3
+info:
+  title: Identity Governance Policy API (Identity Service)
+  description: |
+    API for managing per-resource, per-identity-type governance policies including correlation rules and attribute mappings.
+
+    **Architecture**: This API manages governance policies at the resource (application) level for each identity type (EMPLOYEE, NON_EMPLOYEE, NON_HUMAN).
+    Each resource can have its own set of:
+    - **Correlation Rules**: Rules for matching resource accounts to internal identities
+    - **Attribute Mappings**: Rules for mapping source attributes to internal identity attributes
+    - **Source Priorities**: Priority ordering for authoritative sources (Global per Identity Type)
+    - **Lifecycle Policies**: Automated identity lifecycle management rules
+
+    **Base Path**: `/api/v1/identity/mapping/policies`
+
+    **Resource-Scoped Policies**: Most policies are scoped to a specific resourceId (application UUID). 
+    The resourceId is embedded in the request body for create/update operations and returned in all responses.
+
+    **Global Policies**: Source priorities are scoped globally per identity type, not per resource.
+
+    **Validation**: The service validates that:
+    - Source fields exist in the application's schema (schemas are identity type-specific)
+    - Target fields exist in the internal identity schema
+    - Resources exist before creating policies
+    - Correlation rules are application-specific (no identityType field needed in rule definitions)
+  version: 3.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Policy Management
+    description: Retrieve and update complete governance policies
+  - name: Correlation Rules
+    description: Manage correlation rules for identity matching
+  - name: Attribute Mappings
+    description: Manage attribute mappings from sources to internal schema
+
+paths:
+  /identity/mapping/policies/{identityType}:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+      - $ref: "#/components/parameters/TenantHeader"
+
+    get:
+      tags: [Policy Management]
+      summary: Get all governance policies for an identity type
+      description: Retrieves all governance policies across all resources for the specified identity type.
+      operationId: getAllPolicies
+      responses:
+        "200":
+          description: List of governance policies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IdentityMappingPolicy"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    put:
+      tags: [Policy Management]
+      summary: Update a complete governance policy
+      description: Updates the complete governance policy for a specific resource. ResourceId must be provided in the request body.
+      operationId: updatePolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentityMappingPolicy"
+      responses:
+        "200":
+          description: Policy updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentityMappingPolicy"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Policy Management]
+      summary: Delete all policies for an identity type
+      description: Deletes all governance policies for the specified identity type across all resources.
+      operationId: deleteAllPolicies
+      responses:
+        "204":
+          description: Policies deleted successfully
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /identity/priorities/policies/{identityType}:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+      - $ref: "#/components/parameters/TenantHeader"
+
+    get:
+      tags: [Policy Management]
+      summary: Get priorities policy
+      description: Retrieves the priorities policy for the specified identity type.
+      operationId: getPriorities
+      responses:
+        "200":
+          description: Priorities policy retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentityTypePolicy"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    put:
+      tags: [Policy Management]
+      summary: Update priorities policy
+      description: Updates the priorities policy for the specified identity type.
+      operationId: updatePriorities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentityTypePolicy"
+            example:
+              sourcePriorities:
+                - targetAttribute: email
+                  priorities:
+                    - resourceId: 123e4567-e89b-12d3-a456-426614174000
+                      sourceAttribute: mail
+                      priority: 1
+      responses:
+        "200":
+          description: Priorities policy updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentityTypePolicy"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /identity/mapping/policies/{identityType}/correlation/rules:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+      - $ref: "#/components/parameters/TenantHeader"
+
+    get:
+      tags: [Correlation Rules]
+      summary: Get all correlation rules for an identity type
+      description: Retrieves all correlation rules across all resources for the specified identity type.
+      operationId: getCorrelationRules
+      responses:
+        "200":
+          description: Correlation rules retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CorrelationRule"
+
+    delete:
+      tags: [Correlation Rules]
+      summary: Delete all correlation rules
+      description: Deletes all correlation rules for the specified identity type across all resources.
+      operationId: deleteAllCorrelationRules
+      responses:
+        "204":
+          description: Correlation rules deleted successfully
+
+  /identity/mapping/policies/{identityType}/correlation/rules/{ruleId}:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+      - $ref: "#/components/parameters/RuleId"
+      - $ref: "#/components/parameters/TenantHeader"
+
+    put:
+      tags: [Correlation Rules]
+      summary: Update a specific correlation rule
+      description: Updates a correlation rule by its unique ID. ResourceId must be provided in the request body.
+      operationId: updateCorrelationRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrelationRule"
+      responses:
+        "200":
+          description: Correlation rule updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrelationRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Correlation Rules]
+      summary: Delete a specific correlation rule
+      description: Deletes a correlation rule by its unique ID.
+      operationId: deleteCorrelationRule
+      responses:
+        "204":
+          description: Correlation rule deleted successfully
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /identity/mapping/policies/{identityType}/attribute/mappings:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+      - $ref: "#/components/parameters/TenantHeader"
+
+    get:
+      tags: [Attribute Mappings]
+      summary: Get all attribute mappings for an identity type
+      description: Retrieves all attribute mappings grouped by target attribute across all resources.
+      operationId: getAttributeMappings
+      responses:
+        "200":
+          description: Attribute mappings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttributeMappingGroup"
+
+    delete:
+      tags: [Attribute Mappings]
+      summary: Delete all attribute mappings
+      description: Deletes all attribute mappings for the specified identity type across all resources.
+      operationId: deleteAllAttributeMappings
+      responses:
+        "204":
+          description: Attribute mappings deleted successfully
+
+  /identity/mapping/policies/{identityType}/attribute/mappings/{mappingId}:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+      - $ref: "#/components/parameters/MappingId"
+      - $ref: "#/components/parameters/TenantHeader"
+
+    put:
+      tags: [Attribute Mappings]
+      summary: Update a specific attribute mapping
+      description: Updates an attribute mapping by its unique ID.
+      operationId: updateAttributeMapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttributeMapping"
+      responses:
+        "200":
+          description: Attribute mapping updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttributeMapping"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Attribute Mappings]
+      summary: Delete a specific attribute mapping
+      description: Deletes an attribute mapping by its unique ID.
+      operationId: deleteAttributeMapping
+      responses:
+        "204":
+          description: Attribute mapping deleted successfully
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Tenant identifier for multi-tenancy
+
+    IdentityType:
+      name: identityType
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [EMPLOYEE, NON_EMPLOYEE, NON_HUMAN]
+      description: Type of identity (EMPLOYEE, NON_EMPLOYEE, or NON_HUMAN)
+
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier of the resource (application)
+
+    RuleId:
+      name: ruleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier of the correlation rule
+
+    MappingId:
+      name: mappingId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier of the attribute mapping
+
+  responses:
+    BadRequest:
+      description: The request is malformed or failed validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            validationError:
+              value:
+                type: "urn:aidentx:errors:validation"
+                title: "Validation Error"
+                status: 400
+                detail: "Source field 'email' does not exist in application schema for resource 'ad-corp-prod'"
+            schemaError:
+              value:
+                type: "urn:aidentx:errors:validation"
+                title: "Schema Validation Error"
+                status: 400
+                detail: "Target attribute 'employeeNumber' does not exist in internal schema for identity type 'EMPLOYEE'"
+
+    Unauthorized:
+      description: Authentication is required or has failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Insufficient permissions to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI reference identifying the problem type
+        title:
+          type: string
+          description: Short, human-readable summary
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence
+        instance:
+          type: string
+          format: uri
+          description: URI reference identifying the specific occurrence
+
+    IdentityMappingPolicy:
+      type: object
+      required: [resourceId]
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+          description: Unique identifier of the resource (application) this policy applies to
+        correlationRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/CorrelationRule"
+          description: Rules for correlating resource accounts to identities
+        attributeMappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeMapping"
+          description: Mappings from source attributes to internal identity attributes
+        lifecyclePolicies:
+          $ref: "#/components/schemas/LifecyclePolicies"
+          description: Automated lifecycle management policies
+
+    IdentityTypePolicy:
+      type: object
+      properties:
+        sourcePriorities:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeSourcePriority"
+          description: Priority ordering for authoritative sources
+
+    AttributeSourcePriority:
+      type: object
+      required: [targetAttribute, priorities]
+      properties:
+        targetAttribute:
+          type: string
+          description: The target attribute name
+        priorities:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourcePriority"
+          description: List of resource priorities for this attribute
+
+    ResourcePriority:
+      type: object
+      required: [resourceId, sourceAttribute, priority]
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+          description: Resource (application) identifier
+        sourceAttribute:
+          type: string
+          description: The source attribute name
+        priority:
+          type: integer
+          minimum: 1
+          description: Priority level (lower number = higher priority)
+
+    CorrelationRule:
+      type: object
+      required: [id, resourceId, mode]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for this correlation rule
+        resourceId:
+          type: string
+          format: uuid
+          description: Resource (application) this rule applies to
+        mode:
+          type: string
+          enum: [attribute, script]
+          description: |
+            Correlation mode determines how matching is performed:
+
+            - **attribute**: Declarative rule-based matching using structured field comparisons.
+              The `ruleGroup` field contains the matching logic with operators, combinators, and field references.
+              The system evaluates these rules against the application schema and internal identity schema.
+
+            - **script**: Custom script-based matching with full access to all data.
+              The `ruleGroup` should be null. Instead, provide custom code in the `script` field.
+              Scripts have direct access to:
+              - All source application attributes (e.g., resourceAccount.email, resourceAccount.employeeId)
+              - All internal identity attributes (e.g., identity.email, identity.employeeNumber)
+              - Context information (tenant, resource metadata)
+              Users can perform any transformations, complex logic, fuzzy matching, or custom algorithms.
+        ruleGroup:
+          $ref: "#/components/schemas/RuleGroup"
+          description: |
+            Nested rule structure for attribute-based correlation.
+            **Used only when mode=attribute. Must be null when mode=script.**
+        script:
+          $ref: "#/components/schemas/CorrelationScript"
+          description: |
+            Custom script for correlation logic.
+            **Used only when mode=script. Must be null when mode=attribute.**
+            Note: Script-based correlation is currently in development.
+      example:
+        # Example for attribute-based correlation
+        # For script mode: set mode="script", ruleGroup=null, and provide script object
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        resourceId: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        mode: "attribute"
+        ruleGroup:
+          combinator: "OR"
+          rules:
+            - combinator: "AND"
+              rules:
+                - field: "email"
+                  operator: "toLowerCase().equals"
+                  valueSource: "field"
+                  value: "email"
+                - field: "employeeId"
+                  operator: "equals"
+                  valueSource: "field"
+                  value: "employeeNumber"
+            - combinator: "AND"
+              rules:
+                - field: "firstName"
+                  operator: "fuzzy"
+                  valueSource: "field"
+                  value: "givenName"
+                - field: "lastName"
+                  operator: "fuzzy"
+                  valueSource: "field"
+                  value: "surname"
+        script: null
+
+    RuleGroup:
+      type: object
+      required: [combinator, rules]
+      properties:
+        combinator:
+          type: string
+          enum: [AND, OR]
+          description: Logical operator combining the rules
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+          description: List of individual rules or nested rule groups
+
+    Rule:
+      type: object
+      description: |
+        A single correlation rule (leaf) or a nested group.
+
+        **Leaf Rule**: Contains field, operator, valueSource, and value for matching.
+        **Group Rule**: Contains combinator and nested rules array.
+
+        The operator field is flexible and supports:
+        - **Basic comparisons**: equals, notEquals, contains, startsWith, endsWith, in, notIn
+        - **Existence checks**: exists, notExists
+        - **Pattern matching**: regex
+        - **Fuzzy matching**: fuzzy (with optional threshold)
+        - **Transformations**: Can include transformation scripts (e.g., "toLowerCase().equals")
+        - **Custom operators**: Any string value that the correlation engine recognizes
+      properties:
+        combinator:
+          type: string
+          enum: [AND, OR]
+          description: Present if this is a group rule with nested rules
+        not:
+          type: boolean
+          description: Negates the result of this rule
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+          description: Nested rules if this is a group rule
+        field:
+          type: string
+          description: Source field name from the application schema (present for leaf rules)
+        operator:
+          type: string
+          description: |
+            Comparison or transformation operator (present for leaf rules).
+            Common operators include:
+            - equals, notEquals, contains, startsWith, endsWith
+            - in, notIn (for array/set comparisons)
+            - exists, notExists (for null/presence checks)
+            - regex (for pattern matching)
+            - fuzzy (for fuzzy matching with threshold)
+            - Custom transformation expressions (e.g., "toLowerCase().equals", "trim().startsWith")
+          example: equals
+        valueSource:
+          type: string
+          enum: [literal, field]
+          description: |
+            Determines how the 'value' field is interpreted:
+            - literal: value is a constant to compare against
+            - field: value is the name of an internal identity field to compare against
+        value:
+          type: string
+          description: |
+            The value to compare the source field against.
+            - If valueSource=literal: A constant value (string, number, etc.)
+            - If valueSource=field: The name of an internal identity attribute to compare against
+
+    CorrelationScript:
+      type: object
+      required: [language, code]
+      description: |
+        Custom script for advanced correlation logic when mode=script.
+
+        The script provides complete flexibility - users can access ALL attributes from both
+        the source application and the internal identity, perform any transformations, apply
+        custom business logic, fuzzy matching algorithms, or complex conditional logic.
+
+        The script should return a boolean indicating whether the resource account matches the identity.
+
+        **Note**: Script-based correlation is currently in development.
+      properties:
+        language:
+          type: string
+          enum: [javascript, groovy, beanshell]
+          description: Scripting language used
+          example: javascript
+        code:
+          type: string
+          description: |
+            The correlation script code with full access to all data.
+
+            **Available Variables**:
+            - `resourceAccount`: Object containing ALL attributes from the source application
+              (e.g., resourceAccount.email, resourceAccount.employeeId, resourceAccount.firstName, etc.)
+            - `identity`: Object containing ALL attributes from the internal identity
+              (e.g., identity.email, identity.employeeNumber, identity.givenName, identity.surname, etc.)
+            - `context`: Additional context (tenant ID, resource metadata, etc.)
+
+            **Return Value**: Boolean - true if the account matches the identity, false otherwise
+
+            **Example Use Cases**:
+            - Custom transformations: toLowerCase(), trim(), substring, regex replacements
+            - Complex business logic: conditional matching based on multiple fields
+            - Fuzzy matching: Levenshtein distance, phonetic matching, similarity scores
+            - External data lookups: Call external APIs for validation
+            - Domain-specific logic: Company-specific matching rules
+          example: |
+            // Example: Complex matching with transformations and fallback logic
+
+            // Normalize and compare emails
+            var resourceEmail = (resourceAccount.email || "").toLowerCase().trim();
+            var identityEmail = (identity.email || "").toLowerCase().trim();
+
+            if (resourceEmail && identityEmail && resourceEmail === identityEmail) {
+              return true;  // Strong match on email
+            }
+
+            // Fallback: Match on employee ID if both exist
+            if (resourceAccount.employeeId && identity.employeeNumber) {
+              if (resourceAccount.employeeId === identity.employeeNumber) {
+                return true;
+              }
+            }
+
+            // Fallback: Fuzzy name matching (basic example)
+            if (resourceAccount.firstName && resourceAccount.lastName) {
+              var resourceFullName = (resourceAccount.firstName + " " + resourceAccount.lastName).toLowerCase();
+              var identityFullName = (identity.givenName + " " + identity.surname).toLowerCase();
+              
+              // Simple contains check (real implementation would use fuzzy matching algorithm)
+              if (resourceFullName === identityFullName) {
+                return true;
+              }
+            }
+
+            return false;  // No match
+
+    AttributeMapping:
+      type: object
+      required: [id, sourceResourceId, sourceAttributeName, targetAttributeName]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for this mapping
+        sourceResourceId:
+          type: string
+          format: uuid
+          description: Source resource (application) identifier
+        sourceAttributeName:
+          type: string
+          description: Name of the attribute on the source resource
+        targetAttributeName:
+          type: string
+          description: Name of the target attribute in the internal identity schema
+        mode:
+          type: string
+          enum: [attribute, script]
+          description: Mapping mode (attribute or script)
+        script:
+          $ref: "#/components/schemas/CorrelationScript"
+          description: Custom script for attribute mapping logic (used when mode=script)
+
+    AttributeMappingGroup:
+      type: object
+      required: [targetAttribute, mappings]
+      properties:
+        targetAttribute:
+          type: string
+          description: Name of the target internal identity attribute
+        mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeMapping"
+          description: All mappings that target this attribute
+
+    LifecyclePolicies:
+      type: object
+      properties:
+        onboarding:
+          $ref: "#/components/schemas/OnboardingPolicy"
+        offboarding:
+          $ref: "#/components/schemas/OffboardingPolicy"
+
+    OnboardingPolicy:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Whether automatic onboarding is enabled
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecycleCondition"
+          description: Conditions that must be met to trigger onboarding
+
+    OffboardingPolicy:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Whether automatic offboarding is enabled
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecycleCondition"
+          description: Conditions that must be met to trigger offboarding
+
+    LifecycleCondition:
+      type: object
+      required: [attribute, operator, value]
+      properties:
+        attribute:
+          type: string
+          description: Attribute name to evaluate
+        operator:
+          type: string
+          enum: [equals, notEquals, contains, exists, notExists]
+          description: Comparison operator
+        value:
+          type: string
+          description: Value to compare against
+
+security:
+  - bearerAuth: []

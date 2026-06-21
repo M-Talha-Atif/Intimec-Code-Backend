@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package com.aidentx.applicationpermissions.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.applicationpermissions.grpc";
+
+/**
+ * gRPC service for permission checking operations
+ * Provides methods to check user permissions and endpoint management
+ */
+service PermissionService {
+  /**
+   * Checks if a user has permission to access a specific endpoint
+   * @param request the permission check request
+   * @return permission check response
+   */
+  rpc checkPermission (PermissionCheckRequest) returns (PermissionCheckResponse);
+  
+  /**
+   * Checks if an endpoint is managed by the permission system
+   * @param request the endpoint check request
+   * @return endpoint check response
+   */
+  rpc checkEndpointExists (EndpointCheckRequest) returns (EndpointCheckResponse);
+  
+  /**
+   * Activates a role after workflow completion
+   * @param request the role activation request
+   * @return role activation response
+   */
+  rpc activateRole (ActivateRoleRequest) returns (ActivateRoleResponse);
+}
+
+/**
+ * Request message for checking user permissions
+ */
+message PermissionCheckRequest {
+  string userId = 1;        // The user ID to check permissions for
+  string tenantId = 2;      // The tenant ID for multi-tenant isolation
+  string apiEndpoint = 3;   // The API endpoint (e.g., "/api/v1/audit-logs")
+  string httpMethod = 4;    // The HTTP method (e.g., "GET", "POST")
+}
+
+/**
+ * Response message for permission check results
+ */
+message PermissionCheckResponse {
+  bool hasPermission = 1;   // True if user has permission, false otherwise
+  string userId = 2;        // Echo back the user ID
+  string tenantId = 3;      // Echo back the tenant ID
+  string apiEndpoint = 4;   // Echo back the API endpoint
+  string httpMethod = 5;    // Echo back the HTTP method
+}
+
+/**
+ * Request message for checking if endpoint is managed
+ */
+message EndpointCheckRequest {
+  string endpoint = 1;      // The API endpoint to check
+  string httpMethod = 2;    // The HTTP method
+}
+
+/**
+ * Response message for endpoint management check
+ */
+message EndpointCheckResponse {
+  bool isManaged = 1;       // True if endpoint is managed by permission system
+  string endpoint = 2;      // Echo back the endpoint
+  string httpMethod = 3;    // Echo back the HTTP method
+}
+
+/**
+ * Request message for role activation
+ */
+message ActivateRoleRequest {
+  string role_id = 1;       // The role ID to activate
+  string tenant_id = 2;     // The tenant ID for multi-tenant isolation
+}
+
+/**
+ * Response message for role activation
+ */
+message ActivateRoleResponse {
+  bool success = 1;         // True if role was activated successfully
+  string message = 2;       // Status message
+  string role_id = 3;       // Echo back the role ID
+}

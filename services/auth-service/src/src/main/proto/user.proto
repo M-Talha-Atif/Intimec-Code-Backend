@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package com.aidentx.auth.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.auth.grpc";
+
+/**
+ * gRPC service for user management operations
+ * Provides methods to retrieve users by various criteria
+ */
+service UserGrpcService {
+  /**
+   * Retrieves all users belonging to a specific tenant
+   * @param tenantId the tenant identifier
+   * @return list of users for the tenant
+   */
+  rpc getUsersByTenant (GetUsersByTenantRequest) returns (GetUsersByTenantResponse);
+
+  /**
+   * Retrieves users by Identity-service identity IDs within a tenant.
+   * @param tenantId the tenant identifier
+   * @param identityIds Identity-service UUIDs to filter users
+   * @return users matching the requested identity IDs
+   */
+  rpc getUsersByIdentityIds (GetUsersByIdentityIdsRequest) returns (GetUsersByIdentityIdsResponse);
+}
+
+/**
+ * Request message for retrieving users by tenant ID
+ */
+message GetUsersByTenantRequest {
+  string tenantId = 1;  // The tenant ID to filter users
+}
+
+/**
+ * Response message containing users for a tenant
+ */
+message GetUsersByTenantResponse {
+  repeated UserInfo users = 1;  // List of users belonging to the tenant
+  int32 totalCount = 2;         // Total number of users found
+  string tenantId = 3;          // The tenant ID that was queried
+}
+
+/**
+ * Request message for retrieving users by Identity-service identity IDs.
+ */
+message GetUsersByIdentityIdsRequest {
+  string tenantId = 1;             // The tenant ID to filter users
+  repeated string identityIds = 2; // Identity-service UUIDs
+}
+
+/**
+ * Response message containing users matching identity IDs.
+ */
+message GetUsersByIdentityIdsResponse {
+  repeated UserInfo users = 1;  // Matching users
+  int32 totalCount = 2;         // Total number of users found
+  string tenantId = 3;          // The tenant ID that was queried
+}
+
+/**
+ * Message representing user information.
+ */
+message UserInfo {
+  string id = 1;                    // User UUID as string
+  string username = 2;              // User's username
+  string email = 3;                 // User's email address
+  string firstName = 4;             // User's first name
+  string lastName = 5;              // User's last name
+  string displayName = 6;           // User's display name
+  string status = 7;                // User status (ACTIVE, INACTIVE, LOCKED, PENDING_VERIFICATION)
+  string tenantId = 8;              // Tenant ID the user belongs to
+  bool isActive = 9;                // Whether the user account is active (computed field)
+  int64 lastLoginAt = 10;           // Last login timestamp (milliseconds since epoch)
+  int64 passwordChangedAt = 11;     // Password last changed timestamp (milliseconds since epoch)
+  int32 failedLoginAttempts = 12;   // Number of failed login attempts
+  int64 lockedUntil = 13;           // Account locked until timestamp (milliseconds since epoch)
+  int64 emailVerifiedAt = 14;       // Email verified timestamp (milliseconds since epoch)
+  bool mfaEnabled = 15;             // Whether MFA is enabled
+  bool isPasswordExpired = 16;      // Whether password has expired
+  string profileData = 17;          // Profile data as JSON string
+  int64 createdAt = 18;             // User creation timestamp (milliseconds since epoch)
+  int64 updatedAt = 19;             // Last update timestamp (milliseconds since epoch)
+  string createdBy = 20;            // ID of user who created this record
+  string updatedBy = 21;            // ID of user who last updated this record
+  string identityId = 22;           // Identity-service identity UUID as string
+}

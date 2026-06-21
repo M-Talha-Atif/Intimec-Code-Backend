@@ -1,0 +1,583 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: api-gateway
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration
+  cloud:
+    gateway:
+      # Global timeout settings for long-running connections like SSE
+      server:
+        webflux:
+          # Enable X-Forwarded headers to preserve original client IP
+          x-forwarded:
+            enabled: true
+            for-enabled: true
+            host-enabled: true
+            port-enabled: true
+            proto-enabled: true
+            prefix-enabled: true
+          httpclient:
+            response-timeout: 30m
+            connect-timeout: 5000
+            pool:
+              max-idle-time: 30m
+      # Configure multipart handling for file uploads
+      httpclient:
+        max-in-memory-size: 10MB
+        max-disk-usage-per-part: 10MB
+        max-parts: 10
+
+      routes:
+        # ===================================================================
+        #                AUTH SERVICE ROUTES (Port 8090)
+        # ===================================================================
+        # Expired password endpoints (protected - requires JWT authentication)
+        - id: expired-password-management
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/auth/expired-password/**
+          filters:
+            - name: AuthFilter
+
+        # WebSocket endpoint for session termination notifications (must come before general auth routes)
+        # SockJS makes HTTP requests first (for /info and handshake), then upgrades to WebSocket
+        - id: auth-websocket
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/auth/ws/**
+
+        # Public authentication endpoints (login, refresh, password reset, etc.)
+        - id: auth-service-public
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/auth/**
+
+        # Spring Security's standard OAuth2 authorization endpoints
+        - id: oauth2-authorization
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/oauth2/authorization/**
+
+        # Spring Security's standard SAML2 endpoints
+        - id: saml2-endpoints
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/saml2/**
+          filters:
+            - PreserveHostHeader
+
+        # Spring Security's standard login-related endpoints
+        - id: login-endpoints
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/login/**
+
+        # Password policy management endpoints (protected)
+        - id: password-policy-management
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/password-policy/**
+          filters:
+            - name: AuthFilter
+
+        # Account lock policy management endpoints (protected)
+        - id: account-lock-policy-management
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/account-lock-policy/**
+          filters:
+            - name: AuthFilter
+
+        # Session control policy management endpoints (protected)
+        - id: session-control-management
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/session-control/**
+          filters:
+            - name: AuthFilter
+
+        # ===================================================================
+        #                CONFIGURATION SERVICE ROUTES (Port 8092)
+        # ===================================================================
+        # Public UI customization endpoint (no auth required)
+        - id: ui-customization-public
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/configurations/ui_customization/theme
+            - Method=GET
+          # No AuthFilter - this route is public
+
+          # Public UI customization endpoint (no auth required)
+        - id: ui-logoDark-public
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/artifacts/ui_customization/theme/artifacts/logoDark/file
+            - Method=GET
+          # No AuthFilter - this route is public
+          # Public UI customization endpoint (no auth required)
+
+        - id: ui-logoLight-public
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/artifacts/ui_customization/theme/artifacts/logoLight/file
+            - Method=GET
+          # No AuthFilter - this route is public
+          # Public UI customization endpoint (no auth required)
+
+        - id: ui-favicon-public
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/artifacts/ui_customization/theme/artifacts/favicon/file
+            - Method=GET
+
+        - id: ui-login-background-public
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/artifacts/ui_customization/theme/artifacts/loginBackground/file
+            - Method=GET
+
+        - id: ui-login-background-dark-public
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/artifacts/ui_customization/theme/artifacts/loginBackgroundDark/file
+            - Method=GET
+
+        - id: sso-admin-api
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/admin/sso/**
+          filters:
+            - name: AuthFilter
+
+        - id: configuration-management-api
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/configurations/**
+          filters:
+            - name: AuthFilter
+
+        - id: artifact-management-api
+          uri: ${GATEWAY_CONFIGURATION_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/artifacts/**
+          filters:
+            - name: AuthFilter
+
+        # ===================================================================
+        #                Identity SERVICE ROUTES (Port 8094)
+        # ===================================================================
+
+        # Identity & Schema Management
+        - id: identity-management
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/identity/**
+          filters:
+            - name: AuthFilter
+
+        # Entitlement Catalog & Governance
+        - id: entitlement-management
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/entitlements/**
+          filters:
+            - name: AuthFilter
+
+        # Access Roles& Schema Management
+        - id: access-roles-management
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/access-roles/**
+          filters:
+            - name: AuthFilter
+
+        # Cross-domain access analytics (roles + entitlements)
+        - id: access-analytics
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/access/analytics/**
+          filters:
+            - name: AuthFilter
+
+        # Shadow (Account) Management
+        - id: shadow-management
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/shadows/**
+          filters:
+            - name: AuthFilter
+
+        # Organization Management (org units, hierarchy, delegates, assignments)
+        - id: org-units-management
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/org-units/**
+          filters:
+            - name: AuthFilter
+
+        # Identity ↔ Org assignment reverse view
+        - id: identities-org-assignments
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/identities/*/org-units/**
+          filters:
+            - name: AuthFilter
+
+        # Org resolution failure audit (admin)
+        - id: org-resolution-failures-admin
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/admin/org-resolution-failures/**
+          filters:
+            - name: AuthFilter
+
+        # Org assignment run audit (per-identity results for reconciliation runs)
+        - id: org-assignment-runs-admin
+          uri: ${GATEWAY_IDENTITY_SERVICE_URL:http://localhost:8094}
+          predicates:
+            - Path=/api/v1/admin/org-assignment-runs/**
+          filters:
+            - name: AuthFilter
+
+        # ===================================================================
+        #                CORE SERVICE ROUTES (Port 8091)
+        # ===================================================================
+
+        # Identity Mapping Policy Management (moved from IAM to Core service)
+        - id: identity-mapping-policies
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/identity/mapping/policies/**
+          filters:
+            - name: AuthFilter
+
+        # ===================================================================
+        #           TASK MANAGEMENT SERVICE ROUTES (Port 8096)
+        # ===================================================================
+        # NOTE: These routes must come BEFORE the applications-service route
+        # because they match more specific paths under /api/v1/applications/*/tasks/**
+        
+        # Task Management API - Application-scoped task operations
+        - id: task-management-app-scoped
+          uri: ${GATEWAY_TASK_MANAGEMENT_SERVICE_URL:http://localhost:8096}
+          predicates:
+            - Path=/api/v1/applications/*/tasks/**
+          filters:
+            - name: AuthFilter
+        
+        # Task Management API - General task operations (CRUD, execute, logs, etc.)
+        - id: task-management-api
+          uri: ${GATEWAY_TASK_MANAGEMENT_SERVICE_URL:http://localhost:8096}
+          predicates:
+            - Path=/api/v1/tasks/**
+          filters:
+            - name: AuthFilter
+
+        # Applications service route (updated to remove tenant ID from path)
+        - id: applications-service
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/applications/**
+          filters:
+            - name: AuthFilter
+            # Allow multipart form data for file uploads
+            - name: RequestSize
+              args:
+                maxSize: 10MB
+
+        # General resources service route
+        - id: resources-general
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/resources/**
+          filters:
+            - name: AuthFilter
+
+        # Connector file upload route
+        - id: connector-files
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/connector-files/**
+          filters:
+            - name: AuthFilter
+            - name: RequestSize
+              args:
+                maxSize: 50MB
+
+        # General connectors service route
+        - id: connectors-general
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/connectors/**
+          filters:
+            - name: AuthFilter
+
+        # General log filtering service route
+        - id: log-management-service-general
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/logs/**
+          filters:
+            - name: AuthFilter
+
+        # Core service route for general endpoints
+        - id: core-service-general
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/core/**
+          filters:
+            - StripPrefix=1
+
+        # Audit logs route
+        - id: audit-logs-protected
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/audit-logs/**
+          filters:
+            - name: AuthFilter
+
+        # SSE notification streaming route (must come before general notifications route)
+        - id: notifications-sse-stream
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/notifications/stream
+          filters:
+            - name: AuthFilter
+
+        # Notification management routes
+        - id: notifications-api
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - name: AuthFilter
+
+        # User notification routes (REST API for fetching notifications)
+        - id: user-notifications-api
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/user-notifications/**
+          filters:
+            - name: AuthFilter
+
+        # Responsibilities routes (Governance tasks aggregation)
+        - id: responsibilities-api
+          uri: ${GATEWAY_CORE_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/responsibilities/**
+          filters:
+            - name: AuthFilter
+
+        # ===================================================================
+        #           APPLICATION PERMISSIONS SERVICE ROUTES (Port 8095)
+        # ===================================================================
+        
+        # Role Management API - All role operations (CRUD)
+        - id: role-management-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/roles/**
+          filters:
+            - name: AuthFilter
+
+        # User Retrieval API - Get users by tenant ID
+        - id: users-tenant-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/users/tenant
+          filters:
+            - name: AuthFilter
+
+        # User lookup endpoints served by auth service (resolve userId, identityId mapping)
+        # This route MUST appear AFTER users-tenant-api to avoid intercepting
+        # /api/v1/users/tenant which is handled by the permissions service.
+        - id: auth-users-api
+          uri: ${GATEWAY_AUTH_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - name: AuthFilter
+
+
+        # User-Role Assignment API - Assign and remove roles from users
+        - id: user-roles-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/user-roles/**
+          filters:
+            - name: AuthFilter
+
+        # Granular Permission Management API - System-wide module, page, and action creation
+        - id: granular-permissions-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/granular-permissions/**
+          filters:
+            - name: AuthFilter
+
+        # Dynamic Rules Management API - Role assignment automation rules
+        - id: dynamic-rules-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/dynamic-rules/**
+          filters:
+            - name: AuthFilter
+
+        # Permission Check API - Check user permissions and page access
+        - id: permission-check-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/permissions/**
+          filters:
+            - name: AuthFilter
+
+        # Global Dynamic Rules API - Manage tenant-wide dynamic rules
+        - id: global-dynamic-rules-api
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/api/v1/global-dynamic-rules/**
+          filters:
+            - name: AuthFilter   
+
+        # Application Permissions Service Health Check
+        - id: app-permissions-health
+          uri: ${GATEWAY_APPLICATION_PERMISSIONS_SERVICE_URL:http://localhost:8095}
+          predicates:
+            - Path=/health/**
+
+        # Opensearch/Elasticsearch main-logs search route
+        - id: opensearch-main-logs
+          uri: ${OPENSEARCH_URL:http://localhost:9200}
+          predicates:
+            - Path=/main-logs/**
+          # =============================================================
+          #               LLM SERVICE ROUTES (Port 8097)
+          # =============================================================
+        - id : llm-service
+          uri: ${GATEWAY_LLM_SERVICE_URL:http://localhost:8097}
+          predicates:
+            - Path=/api/v1/llm/**
+
+        # ===================================================================
+        #           ACCESS PORTAL SERVICE ROUTES (Port 8099)
+        # ===================================================================
+
+        - id: access-portal-service
+          uri: ${GATEWAY_ACCESS_PORTAL_SERVICE_URL:http://localhost:8099}
+          predicates:
+            - Path=/api/v1/access-portal/**
+          filters:
+            - name: AuthFilter
+            - "RewritePath=/api/v1/access-portal/(?<segment>.*), /${segment}"
+
+
+        # =============================================================
+        #           WORKFLOW SERVICE ROUTES (Port 8098)
+        # =============================================================
+        
+        # WebSocket endpoint for workflow simulation real-time updates (must come before general workflow routes)
+        # SockJS makes HTTP requests first (for /info and handshake), then upgrades to WebSocket
+        - id: workflow-websocket
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/workflows/ws/**
+          filters:
+            - RewritePath=/api/v1/workflows/(?<segment>.*), /$\{segment}
+        
+        # Workflow Execution Routes (must come before general workflows routes)
+        # Execute workflow
+        - id: workflow-execute
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/workflows/*/execute
+          filters:
+            - name: AuthFilter
+
+        # Get workflow executions for a specific workflow
+        - id: workflow-executions-by-workflow
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/workflows/*/executions
+          filters:
+            - name: AuthFilter
+
+        # Execution operations (get, trace, cancel, retry)
+        - id: workflow-executions-api
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/executions/**
+          filters:
+            - name: AuthFilter
+
+        # Workflow Simulation API - Simulation endpoints
+        - id: workflow-simulation-api
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/simulations/**
+          filters:
+            - name: AuthFilter
+
+        # Workflow Management API - CRUD operations for workflow definitions
+        - id: workflow-management-api
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/workflows/**
+          filters:
+            - name: AuthFilter
+
+        # Workflow Approval API - Approve, reject, delegate approval requests
+        - id: workflow-approval-api
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/approvals/**
+          filters:
+            - name: AuthFilter
+
+        # Action Templates API - Public endpoint for workflow designer
+        - id: workflow-action-templates
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/action-templates
+
+        # Workflow Template API - Template CRUD, instantiation, system templates
+        - id: workflow-template-api
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/v1/templates/**
+          filters:
+            - name: AuthFilter
+
+        # Workflow Service Health Checks
+        - id: workflow-health
+          uri: ${GATEWAY_WORKFLOW_SERVICE_URL:http://localhost:8098}
+          predicates:
+            - Path=/api/health,/api/workflows/health,/api/ping
+
+# JWT Configuration (should match auth service)
+jwt:
+  secret: mySuperSecretKey12345678901234AZERTY123456789
+  expiration: 900000
+
+# gRPC Client Configuration
+grpc:
+  client:
+    application-permissions-service:
+      address: ${GRPC_APPLICATION_PERMISSIONS_SERVICE_ADDRESS:static://localhost:8001}
+      negotiationType: plaintext
+    auth-service:
+      address: ${GRPC_AUTH_SERVICE_ADDRESS:static://localhost:8002}
+      negotiationType: plaintext
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: OFF
+    org.springframework.security: OFF
+    org.springframework.web.socket: OFF
+    reactor.netty: OFF

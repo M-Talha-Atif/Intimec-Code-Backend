@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 1. INHERIT from the top-level aggregator POM -->
+    <!-- This allows it to know about properties like java.version -->
+    <parent>
+        <groupId>com.aidentx</groupId>
+        <artifactId>backend-aggregator</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 2. DEFINE the coordinates for this module itself -->
+    <!-- It's a "parent" for other modules, so its packaging is 'pom' -->
+    <artifactId>shared-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Shared Libraries Parent</name>
+    <description>Parent and aggregator for all shared libraries.</description>
+
+    <!-- 3. LIST all the sub-modules within the shared/ directory -->
+    <modules>
+        <module>dgraph-client</module>
+        <module>auditlog-dto</module>
+        <module>unified-logging</module>
+        <module>encryption-service</module>
+        <module>common-protos</module>
+        <module>connector-framework</module>
+        <module>dal-core</module>
+        <module>iam-dtos</module>
+	    <module>iam-events</module>
+    </modules>
+
+</project>

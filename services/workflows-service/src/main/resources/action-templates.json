@@ -1,0 +1,299 @@
+{
+  "templates": [
+    {
+      "type": "action.role.activate",
+      "name": "Activate Role",
+      "description": "Activates a role",
+      "category": "application permissions",
+      "icon": "check-circle",
+      "requiredContext": ["roleId"],
+      "optionalContext": ["tenantId", "approver"],
+      "template": {
+        "method": "PUT",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/activate",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}"
+        },
+        "bodyTemplate": {
+          "activatedBy": "{{approver}}",
+          "activatedAt": "{{now}}"
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.role.delete",
+      "name": "Delete Role",
+      "description": "Deletes a role",
+      "category": "application permissions",
+      "icon": "trash-2",
+      "requiredContext": ["roleId"],
+      "optionalContext": ["tenantId", "rejectedBy"],
+      "template": {
+        "method": "DELETE",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}"
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.role.create",
+      "name": "Create Role",
+      "description": "Creates a new role with specified permissions",
+      "category": "application permissions",
+      "icon": "plus-circle",
+      "requiredContext": ["roleName", "roleType", "riskLevel"],
+      "optionalContext": ["tenantId", "description", "businessJustification", "ownerIds", "tags", "createdBy", "createdById", "requireOwnerApproval"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}"
+        },
+        "bodyTemplate": {
+          "roleName": "{{roleName}}",
+          "roleType": "{{roleType}}",
+          "description": "{{description}}",
+          "businessJustification": "{{businessJustification}}",
+          "riskLevel": "{{riskLevel}}",
+          "requireOwnerApproval": "{{requireOwnerApproval}}",
+          "ownerIds": "{{ownerIds}}",
+          "tags": "{{tags}}",
+          "submitForApproval": false
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.user.create",
+      "name": "Create Employee Identity",
+      "description": "Creates a new employee identity in the system",
+      "category": "identity management",
+      "icon": "user-plus",
+      "requiredContext": ["username", "email", "firstName", "lastName", "employeeId"],
+      "optionalContext": ["tenantId", "department", "managerId", "title", "workLocation"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://identity-service:8094/api/v1/identity/employee",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer {{jwtToken}}"
+        },
+        "bodyTemplate": {
+          "username": "{{username}}",
+          "email": "{{email}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "employeeId": "{{employeeId}}",
+          "department": "{{department}}",
+          "managerId": "{{managerId}}",
+          "title": "{{title}}",
+          "workLocation": "{{workLocation}}"
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.user.delete",
+      "name": "Delete Identity",
+      "description": "Deletes an identity from the system",
+      "category": "identity management",
+      "icon": "user-minus",
+      "requiredContext": ["identityId"],
+      "optionalContext": ["jwtToken"],
+      "template": {
+        "method": "DELETE",
+        "urlTemplate": "http://identity-service:8094/api/v1/identity/{{identityId}}",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer {{jwtToken}}"
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.permission.assign",
+      "name": "Assign Permission to Role",
+      "description": "Assigns a permission to a role",
+      "category": "application permissions",
+      "icon": "key",
+      "requiredContext": ["roleId", "actionId", "justification"],
+      "optionalContext": ["tenantId", "conditionScript", "jwtToken"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/assign",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "bodyTemplate": {
+          "actionId": "{{actionId}}",
+          "justification": "{{justification}}",
+          "conditionScript": "{{conditionScript}}"
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.permission.revoke",
+      "name": "Revoke Permission from Role",
+      "description": "Revokes a permission from a role",
+      "category": "application permissions",
+      "icon": "key-off",
+      "requiredContext": ["roleId", "actionId"],
+      "optionalContext": ["tenantId", "jwtToken"],
+      "template": {
+        "method": "DELETE",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/delete/{{actionId}}",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "timeout": 30000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.permission.bulk.assign",
+      "name": "Bulk Assign Permissions to Role",
+      "description": "Assigns multiple permissions to a role in a single atomic operation",
+      "category": "application permissions",
+      "icon": "layers",
+      "requiredContext": ["roleId", "assignments"],
+      "optionalContext": ["tenantId", "jwtToken"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/bulk",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "bodyTemplate": {
+          "assignments": "{{assignments}}"
+        },
+        "timeout": 60000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.permission.bulk.revoke",
+      "name": "Bulk Revoke Permissions from Role",
+      "description": "Revokes multiple permissions from a role in a single atomic operation",
+      "category": "application permissions",
+      "icon": "layers-off",
+      "requiredContext": ["roleId", "actionIds"],
+      "optionalContext": ["tenantId", "jwtToken"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/roles/{{roleId}}/permissions/bulk-revoke",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "bodyTemplate": {
+          "actionIds": "{{actionIds}}"
+        },
+        "timeout": 60000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.user.role.assign",
+      "name": "Assign a Role to Users",
+      "description": "Assigns a role to one or more users after approval workflow completes",
+      "category": "application permissions",
+      "icon": "user-check",
+      "requiredContext": ["roleId", "userIds"],
+      "optionalContext": ["tenantId", "jwtToken", "sendNotificationOnAssignment"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/user-roles/assign",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "bodyTemplate": {
+          "roleId": "{{roleId}}",
+          "userIds": "{{userIds}}",
+          "sendNotificationOnAssignment": "{{sendNotificationOnAssignment}}"
+        },
+        "timeout": 60000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.user.role.revoke",
+      "name": "Revoke Role from Users",
+      "description": "Revokes a role from one or more users after approval workflow completes",
+      "category": "application permissions",
+      "icon": "user-x",
+      "requiredContext": ["roleId", "userIds"],
+      "optionalContext": ["tenantId", "jwtToken", "sendNotificationOnAssignment"],
+      "template": {
+        "method": "DELETE",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/user-roles/revoke",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "bodyTemplate": {
+          "roleId": "{{roleId}}",
+          "userIds": "{{userIds}}",
+          "sendNotificationOnAssignment": "{{sendNotificationOnAssignment}}"
+        },
+        "timeout": 60000,
+        "retries": 3
+      }
+    },
+    {
+      "type": "action.users.roles.cart.assign",
+      "name": "Assign Roles to Users from Cart",
+      "description": "Assigns role to one or more users after approval workflow completes",
+      "category": "application permissions",
+      "icon": "user-check",
+      "requiredContext": ["roleUserMap", "overallJustification"],
+      "optionalContext": ["tenantId", "jwtToken", "sendNotificationOnAssignment"],
+      "template": {
+        "method": "POST",
+        "urlTemplate": "http://application-permissions-service:8095/api/v1/user-roles/assign-from-cart",
+        "headersTemplate": {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "{{tenantId}}",
+          "Authorization": "Bearer {{jwtToken}}",
+          "X-Workflow-Execution-Id": "{{workflowExecutionId}}"
+        },
+        "bodyTemplate": {
+          "roleUserMap": "{{roleUserMap}}",
+          "overallJustification": "{{overallJustification}}",
+          "sendNotificationOnAssignment": "{{sendNotificationOnAssignment}}"
+        },
+        "timeout": 60000,
+        "retries": 3
+      }
+    }
+  ]
+}

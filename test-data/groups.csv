@@ -1,0 +1,31 @@
+uid,cn,description,type,owner
+GRP-IT-ADMINS,IT Administrators,Full administrative access to all IT systems and infrastructure,security,MGR004
+GRP-IT-SUPPORT,IT Support,Helpdesk and tier-1 support access to ticketing and remote tools,functional,MGR004
+GRP-IT-DEVOPS,DevOps Engineers,Access to CI/CD pipelines and cloud infrastructure management,functional,MGR004
+GRP-ENG-DEVELOPERS,Software Developers,Access to source code repositories and development environments,functional,MGR010
+GRP-ENG-QA,QA Engineers,Access to test environments and quality assurance tooling,functional,MGR010
+GRP-ENG-ARCHITECTS,Solution Architects,Elevated access to architecture documentation and design systems,functional,MGR010
+GRP-FIN-ANALYSTS,Financial Analysts,Read access to financial reporting dashboards and ERP modules,functional,MGR011
+GRP-FIN-CONTROLLERS,Financial Controllers,Approval authority for purchase orders and budget allocations,security,MGR011
+GRP-FIN-AUDITORS,Internal Auditors,Read-only access across all financial systems for audit purposes,compliance,MGR011
+GRP-HR-ADMINS,HR Administrators,Full access to HRIS and employee records management,security,MGR009
+GRP-HR-RECRUITERS,Recruiters,Access to applicant tracking system and onboarding workflows,functional,MGR009
+GRP-HR-PAYROLL,Payroll Specialists,Access to payroll processing and compensation systems,security,MGR009
+GRP-SALES-REPS,Sales Representatives,CRM read/write access and lead management,functional,MGR013
+GRP-SALES-MANAGERS,Sales Managers,CRM administration and sales pipeline reporting,functional,MGR013
+GRP-MKT-CONTENT,Marketing Content,Access to CMS and digital asset management platforms,functional,MGR006
+GRP-MKT-ANALYTICS,Marketing Analytics,Access to marketing analytics dashboards and campaign data,functional,MGR006
+GRP-OPS-LOGISTICS,Operations Logistics,Access to supply chain and warehouse management systems,functional,MGR003
+GRP-OPS-PROCUREMENT,Procurement,Access to vendor management and purchase order systems,functional,MGR003
+GRP-EXEC-LEADERSHIP,Executive Leadership,Board-level reporting dashboards and strategic planning tools,security,MGR001
+GRP-COMPLIANCE-SOX,SOX Compliance,SOX-regulated system access for compliance monitoring,compliance,MGR011
+GRP-SEC-INCIDENT,Security Incident Response,Access to SIEM and incident response tooling,security,MGR004
+GRP-DBA-PROD,Production DBA,Direct access to production database systems,security,MGR004
+GRP-CLOUD-AWS,AWS Cloud Access,Access to AWS console and cloud resource management,functional,MGR004
+GRP-CLOUD-AZURE,Azure Cloud Access,Access to Azure portal and cloud resource management,functional,MGR004
+GRP-VPN-REMOTE,VPN Remote Access,VPN access for remote workers,functional,MGR004
+GRP-SAP-USERS,SAP End Users,Basic SAP transaction access for day-to-day operations,functional,MGR003
+GRP-SAP-ADMINS,SAP Administrators,SAP Basis administration and transport management,security,MGR004
+GRP-SERVICENOW-AGENTS,ServiceNow Agents,ServiceNow ITSM agent access for ticket handling,functional,MGR004
+GRP-JIRA-USERS,Jira Users,Jira project access for issue tracking and sprint management,functional,MGR010
+GRP-CONFLUENCE-EDITORS,Confluence Editors,Confluence editing access for documentation and knowledge base,functional,MGR010

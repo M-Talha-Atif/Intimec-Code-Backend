@@ -1,0 +1,90 @@
+{
+  "Configuration": {
+    "status": "TRACE",
+    "name": "WorkflowServiceConfig",
+    "properties": {
+      "property": [
+        {
+          "name": "app-name",
+          "value": "workflows-service"
+        }
+      ]
+    },
+    "Appenders": {
+      "CONSOLE": {
+        "name": "CONSOLE",
+        "target": "SYSTEM_OUT",
+        "PatternLayout": {
+          "pattern": "%highlight{%d{HH:mm:ss.SSS} [%15.15t] %-5level %c{1} - %msg%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=green, DEBUG=cyan, TRACE=blue}"
+        }
+      },
+      "UnifiedHttpAppender": {
+        "type": "UnifiedHttpAppender",
+        "name": "UnifiedHttpAppender",
+        "endpoint": "${env:OPENSEARCH_URL:-http://localhost:9200}/main-logs/_doc",
+        "username": "${env:OPENSEARCH_USERNAME:-admin}",
+        "password": "${env:OPENSEARCH_PASSWORD:-!Admin123456}",
+        "JsonTemplateLayout": {
+          "eventTemplateUri": "classpath:log-template.json"
+        }
+      }
+    },
+    "Loggers": {
+      "Root": {
+        "level": "INFO",
+        "AppenderRef": [
+          {
+            "ref": "CONSOLE"
+          },
+          {
+            "ref": "UnifiedHttpAppender"
+          }
+        ]
+      },
+      "Logger": [
+        {
+          "name": "com.aidentx.workflowsservice",
+          "level": "TRACE",
+          "additivity": false,
+          "AppenderRef": [
+            {
+              "ref": "CONSOLE"
+            },
+            {
+              "ref": "UnifiedHttpAppender"
+            }
+          ]
+        },
+        {
+          "name": "com.aidentx.workflowsservice.service.NodeExecutor",
+          "level": "TRACE",
+          "additivity": false,
+          "AppenderRef": [
+            {
+              "ref": "CONSOLE"
+            },
+            {
+              "ref": "UnifiedHttpAppender"
+            }
+          ]
+        },
+        {
+          "name": "org.hibernate",
+          "level": "WARN"
+        },
+        {
+          "name": "org.hibernate.SQL",
+          "level": "DEBUG"
+        },
+        {
+          "name": "org.springframework.web",
+          "level": "INFO"
+        },
+        {
+          "name": "org.quartz",
+          "level": "INFO"
+        }
+      ]
+    }
+  }
+}

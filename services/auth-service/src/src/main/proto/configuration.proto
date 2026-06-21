@@ -1,0 +1,157 @@
+syntax = "proto3";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto"; // Import for the Empty message type
+
+package com.aidentx.configuration.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.configuration.grpc";
+
+// The primary gRPC service for all configuration and artifact management.
+// This service is the single source of truth for all write operations, ensuring
+// that business logic and system-wide refresh events are applied consistently.
+service ConfigurationGrpcService {
+  // Retrieves a configuration's decrypted data scoped to a tenant.
+  rpc getConfigurationByTenant (GetConfigurationByTenantRequest) returns (GetConfigurationResponse);
+
+  // Saves or updates a configuration's inline data. Triggers a refresh event.
+  rpc saveConfiguration (SaveConfigurationRequest) returns (SaveConfigurationResponse);
+
+  // Deletes a configuration and all its artifacts. Triggers a refresh event.
+  rpc deleteConfiguration (DeleteConfigurationRequest) returns (DeleteConfigurationResponse);
+
+  // Retrieves all artifacts for a configuration, returning a map of their details.
+  rpc getRelatedArtifacts (GetRelatedArtifactsRequest) returns (GetRelatedArtifactsResponse);
+
+  // Retrieves the content of a specific artifact.
+  rpc getArtifact (GetArtifactRequest) returns (GetArtifactResponse);
+
+  // Saves or updates an artifact file. Triggers a refresh event.
+  rpc saveArtifact (SaveArtifactRequest) returns (SaveArtifactResponse);
+
+  // Deletes a specific artifact. Triggers a refresh event.
+  rpc deleteArtifact (DeleteArtifactRequest) returns (DeleteArtifactResponse);
+
+  /**
+   * Retrieves a list of all configuration entities in the system.
+   * This is a low-level administrative call.
+   */
+  rpc getAllConfigurations (google.protobuf.Empty) returns (GetAllConfigurationsResponse);
+
+  /**
+   * Retrieves a list of all configuration entities of a specific type.
+   * This is a low-level administrative call.
+   */
+  rpc getConfigurationsByType (GetConfigurationsByTypeRequest) returns (GetConfigurationsByTypeResponse);
+
+  /**
+   * Partially updates an existing configuration.
+   * This is used for PATCH operations to merge data, toggle flags, etc.
+   * Triggers a refresh event.
+   */
+  rpc partialUpdateConfiguration (PartialUpdateConfigurationRequest) returns (PartialUpdateConfigurationResponse);
+}
+
+
+// ====== Configuration Messages ======
+message GetConfigurationByTenantRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+}
+message GetConfigurationResponse {
+  bool found = 1;
+  google.protobuf.Struct json_data = 2;
+}
+message SaveConfigurationRequest {
+  string config_type = 1;
+  string config_key = 2;
+  string tenant_id = 3;
+  google.protobuf.Struct json_data = 4;
+  string config_sub_type = 5;
+  bool encrypt_entire_config = 6;
+}
+message SaveConfigurationResponse {
+    google.protobuf.Struct saved_config_data = 1;
+}
+message DeleteConfigurationRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+}
+message DeleteConfigurationResponse {
+  bool deleted = 1;
+}
+
+// ====== Artifact Messages ======
+message GetRelatedArtifactsRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+}
+message GetRelatedArtifactsResponse {
+    google.protobuf.Struct artifacts_map = 1;
+}
+message GetArtifactRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+  string artifact_type = 4;
+}
+message GetArtifactResponse {
+  bool found = 1;
+  string content = 2;
+}
+message SaveArtifactRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+  string artifact_type = 4;
+  oneof data_payload {
+    google.protobuf.Struct json_data = 6; // For inline JSON artifacts
+    bytes file_bytes = 8;                 // For raw binary artifacts
+  }
+  bool encrypt_entirely = 7; // Applies to inline JSON only
+}
+message SaveArtifactResponse {
+  google.protobuf.Struct updated_configuration = 1;
+}
+message DeleteArtifactRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+  string artifact_type = 4;
+}
+message DeleteArtifactResponse {
+  bool deleted = 1;
+}
+
+
+message GetConfigurationsByTypeRequest {
+  string config_type = 1;
+}
+
+// Response for both GetAll and GetByType RPCs, containing a list of configurations.
+message GetAllConfigurationsResponse {
+  // A list of configuration entities, serialized as JSON-like structures.
+  repeated google.protobuf.Struct configurations = 1;
+}
+
+message GetConfigurationsByTypeResponse {
+  // A list of configuration entities, serialized as JSON-like structures.
+  repeated google.protobuf.Struct configurations = 1;
+}
+
+message PartialUpdateConfigurationRequest {
+  string config_type = 1;
+  string tenant_id = 2;
+  string config_key = 3;
+  // The patch data. Can be a partial JSON object with fields to update.
+  google.protobuf.Struct patch_data = 4;
+}
+
+message PartialUpdateConfigurationResponse {
+  // Returns the full, updated configuration entity as a JSON-like structure.
+  google.protobuf.Struct updated_configuration = 1;
+}

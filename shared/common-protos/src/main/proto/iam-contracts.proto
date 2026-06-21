@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package com.aidentx.iam.contracts.grpc;
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.iam.contracts.grpc";
+option java_outer_classname = "IAMServiceContractsProto";
+
+// ===================================================================
+//  Service for Admin UI to Manage the Full Policy
+// ===================================================================
+service IdentityMappingPolicyUIService {
+  // Fetches the entire, consolidated policy for the UI
+  rpc GetIdentityMappingPolicy(GetIdentityMappingPolicyRequest)
+      returns (IdentityMappingPolicyMessage);
+
+  // Saves the entire, consolidated policy from the UI
+  rpc SaveIdentityMappingPolicy(SaveIdentityMappingPolicyRequest)
+      returns (IdentityMappingPolicyMessage);
+}
+
+// ===================================================================
+//  Service for Inter-Service Communication (core-service -> identity-service)
+// ===================================================================
+service IdentityGovernanceSystemService {
+  // Called by core-service after a new application is onboarded
+  rpc RegisterDataSource(RegisterDataSourceRequest)
+      returns (google.protobuf.Empty);
+
+  // Called by core-service when an application is decommissioned
+  rpc DeregisterDataSource(DeregisterDataSourceRequest)
+      returns (google.protobuf.Empty);
+
+  // Called by core-service's correlation engine to get the current rules for an
+  // app
+  rpc GetCorrelationRulesForResource(GetCorrelationRulesForResourceRequest)
+      returns (GetCorrelationRulesForResourceResponse);
+
+  // Called by core-service to upsert a governance policy fragment for a source
+  rpc UpsertPolicyFragment(UpsertPolicyFragmentRequest)
+      returns (google.protobuf.Empty);
+}
+
+// --- Message Definitions ---
+
+message IdentityMappingPolicyMessage {
+  repeated SourcePriorityMessage source_priorities = 1;
+  repeated CorrelationRuleMessage correlation_rules = 2;
+  repeated AttributeMappingRuleMessage attribute_mappings = 3;
+}
+
+message SourcePriorityMessage {
+  string resource_id = 1;
+  string source_name = 2;
+  int32 priority = 3;
+}
+
+message CorrelationRuleMessage {
+  string resource_id =
+      1; // The resource (application) this correlation rule belongs to
+  string mode = 2; // The correlation mode (e.g., "attribute", "rule")
+  RuleGroupMessage rule_group = 3;
+}
+
+message RuleGroupMessage {
+  string combinator = 1; // "AND", "OR"
+  repeated RuleMessage rules = 2;
+}
+
+message RuleMessage {
+  string combinator = 1;                 // For nested rule groups
+  bool not = 2;                          // Negation flag
+  repeated RuleMessage nested_rules = 3; // For nested rule structures
+  string field = 4;                      // The field being evaluated
+  string operator = 5;                   // "equals", "contains", etc.
+  string value_source = 6;               // "constant", "attribute", etc.
+  string value = 7;                      // The actual value or reference
+}
+
+message AttributeMappingGroupMessage {
+  string id = 1;
+  string target_attribute_id = 2;
+  string target_attribute_name = 3;
+  repeated AttributeMappingRuleMessage mappings = 4;
+}
+
+message AttributeMappingRuleMessage {
+  string id = 1;
+  string target_attribute_id = 2;
+  string source_attribute_name = 3;
+  string transform = 4;     // "direct", "lowercase", "script", etc.
+  ScriptMessage script = 5; // For script-based transformations
+}
+
+message ScriptMessage {
+  string data = 1; // Script content
+  string lang = 2; // Script language
+}
+
+// --- Request/Response Messages ---
+
+message GetIdentityMappingPolicyRequest {
+  string tenant_id = 1;
+  string schema_id = 2;
+}
+
+message SaveIdentityMappingPolicyRequest {
+  string tenant_id = 1;
+  string schema_id = 2;
+  IdentityMappingPolicyMessage policy = 3;
+}
+
+message RegisterDataSourceRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+  string source_name = 3;
+  string associated_schema_id = 4;
+}
+
+message DeregisterDataSourceRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+}
+
+message GetCorrelationRulesForResourceRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+  string schema_id = 3;
+}
+
+message GetCorrelationRulesForResourceResponse {
+  repeated CorrelationRuleMessage rules = 1;
+}
+
+
+
+message UpsertPolicyFragmentRequest {
+  string tenant_id = 1;
+  string schema_id = 2;   // The policy context (e.g., "Employee" schema)
+  string resource_id = 3; // The source this fragment is for
+  string source_name = 4; // Denormalized name for convenience
+  GovernancePolicyFragment fragment = 5;
+}
+
+message GovernancePolicyFragment {
+  int32 priority = 1;
+  repeated CorrelationRuleMessage correlation_rules = 2;
+  repeated AttributeMappingRuleMessage attribute_mappings = 3;
+  repeated SourcePriorityMessage source_priorities = 4;
+}

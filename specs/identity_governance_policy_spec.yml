@@ -1,0 +1,326 @@
+openapi: 3.0.3
+info:
+  title: Identity Governance Policy API (Identity Service)
+  description: |
+    API for managing identity-type level governance policies including source priorities, correlation rules, attribute mappings, and lifecycle policies.
+
+    **Architectural Role**: This API is part of the Identity Service, which acts as the single source of truth for ALL policies. These policies operate at the identity-type level (EMPLOYEE, NON_EMPLOYEE, NON_HUMAN) and provide system-wide defaults.
+
+    **Per-Application-Per-Identity-Type Policies**: Note that applications can define their own per-identity-type policies during onboarding (via the Core Service's Applications API). These application-specific policies take precedence over the global defaults managed here.
+
+    **Runtime Usage**: During task execution, the Task Management Service fetches these policies (along with application-specific overrides) to build the complete "effective policy" for synchronization.
+
+    **API Structure**:
+    - Use `GET /policies/governance/{identityType}` to retrieve the complete aggregated policy.
+    - Use dedicated sub-endpoints (e.g., `PUT .../priorities`, `PUT .../correlation`) for granular updates.
+  version: 2.4.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Governance Policies
+    description: View the aggregated policy and manage the main policy container.
+  - name: Source Priorities
+    description: Manage authoritative source priority rules.
+  - name: Fallback Correlation & Mappings
+    description: Manage default correlation and mapping rules that apply when no resource-specific policy is defined.
+  - name: Lifecycle Policies
+    description: Manage automated identity lifecycle policies (onboarding/offboarding).
+
+paths:
+  /policies/governance/{identityType}:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+    get:
+      tags: [Governance Policies]
+      summary: Get the complete, aggregated governance policy
+      operationId: getAggregatedGovernancePolicy
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Aggregated governance policy retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GovernancePolicy"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /policies/governance/{identityType}/priorities:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+    get:
+      tags: [Source Priorities]
+      summary: Get source priorities
+      operationId: getSourcePriorities
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          {
+            description: Source priorities retrieved successfully.,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        type: array,
+                        items:
+                          {
+                            $ref: "common_schemas.yml#/components/schemas/AttributeSourcePriority",
+                          },
+                      },
+                  },
+              },
+          }
+    put:
+      tags: [Source Priorities]
+      summary: Update source priorities
+      operationId: updateSourcePriorities
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "common_schemas.yml#/components/schemas/AttributeSourcePriority"
+      responses:
+        "200": { description: "Source priorities updated." }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /policies/governance/{identityType}/correlation:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+    get:
+      tags: [Fallback Correlation & Mappings]
+      summary: Get fallback correlation rules
+      operationId: getCorrelation
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          {
+            description: "Fallback correlation rules retrieved successfully.",
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "common_schemas.yml#/components/schemas/CorrelationConfig",
+                      },
+                  },
+              },
+          }
+    put:
+      tags: [Fallback Correlation & Mappings]
+      summary: Update fallback correlation rules
+      operationId: updateCorrelation
+      security: [bearerAuth: []]
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "common_schemas.yml#/components/schemas/CorrelationConfig",
+                    },
+                },
+            },
+        }
+      responses:
+        "200": { description: "Fallback correlation rules updated." }
+
+  /policies/governance/{identityType}/inbound-mappings:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+    get:
+      tags: [Fallback Correlation & Mappings]
+      summary: Get fallback inbound attribute mappings
+      operationId: getInboundMappings
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          {
+            description: "Fallback inbound mappings retrieved successfully.",
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        type: array,
+                        items:
+                          {
+                            $ref: "common_schemas.yml#/components/schemas/Mapping",
+                          },
+                      },
+                  },
+              },
+          }
+    put:
+      tags: [Fallback Correlation & Mappings]
+      summary: Update fallback inbound attribute mappings
+      operationId: updateInboundMappings
+      security: [bearerAuth: []]
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: array,
+                      items:
+                        {
+                          $ref: "common_schemas.yml#/components/schemas/Mapping",
+                        },
+                    },
+                },
+            },
+        }
+      responses:
+        "200": { description: "Fallback inbound mappings updated." }
+
+  /policies/governance/{identityType}/lifecycle-policies:
+    parameters:
+      - $ref: "#/components/parameters/IdentityType"
+    get:
+      tags: [Lifecycle Policies]
+      summary: Get lifecycle policies
+      operationId: getLifecyclePolicies
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          {
+            description: "Lifecycle policies retrieved successfully.",
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies",
+                      },
+                  },
+              },
+          }
+    put:
+      tags: [Lifecycle Policies]
+      summary: Update lifecycle policies
+      operationId: updateLifecyclePolicies
+      security: [bearerAuth: []]
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies",
+                    },
+                },
+            },
+        }
+      responses:
+        "200": { description: "Lifecycle policies updated." }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  parameters:
+    IdentityType:
+      name: identityType
+      in: path
+      required: true
+      schema:
+        $ref: "common_schemas.yml#/components/schemas/IdentityType"
+
+  responses:
+    BadRequest:
+      description: The request body is malformed or failed validation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            type: "urn:aidentx:errors:validation"
+            title: "Validation Error"
+            status: 400
+            detail: "The source priorities configuration contains a duplicate priority for resource 'ad-corp-prod'."
+    Unauthorized:
+      description: Authentication is required.
+    Forbidden:
+      description: Insufficient permissions.
+    NotFound:
+      description: No governance policy has been configured for the specified identity type.
+
+  schemas:
+    # --- ERROR SCHEMA ---
+    ErrorResponse:
+      type: object
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+
+    # --- TOP-LEVEL POLICY OBJECT (for GET aggregation) ---
+    GovernancePolicy:
+      type: object
+      required: [identityType]
+      properties:
+        identityType:
+          { $ref: "common_schemas.yml#/components/schemas/IdentityType" }
+        sourcePriorities:
+          {
+            type: array,
+            items:
+              {
+                $ref: "common_schemas.yml#/components/schemas/AttributeSourcePriority",
+              },
+          }
+        correlation:
+          { $ref: "common_schemas.yml#/components/schemas/CorrelationConfig" }
+        inboundMappings:
+          {
+            type: array,
+            items: { $ref: "common_schemas.yml#/components/schemas/Mapping" },
+          }
+        outboundMappings:
+          {
+            type: array,
+            items: { $ref: "common_schemas.yml#/components/schemas/Mapping" },
+          }
+        lifecyclePolicies:
+          { $ref: "common_schemas.yml#/components/schemas/LifecyclePolicies" }
+        metadata:
+          { $ref: "#/components/schemas/PolicyMetadata", readOnly: true }
+
+    # --- LOCAL SCHEMAS for this API ---
+    PolicyMetadata:
+      type: object
+      readOnly: true
+      properties:
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer }

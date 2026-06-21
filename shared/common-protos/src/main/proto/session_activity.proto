@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package com.aidentx.auth.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.auth.grpc";
+option java_outer_classname = "SessionActivityProto";
+
+// Service for updating session activity
+service SessionActivityService {
+  // Update the last activity timestamp for a session
+  rpc UpdateLastActivity(UpdateLastActivityRequest) returns (UpdateLastActivityResponse);
+}
+
+// Request message for updating last activity
+message UpdateLastActivityRequest {
+  string session_id = 1; // The session UUID to identify the session
+}
+
+// Response message for updating last activity
+message UpdateLastActivityResponse {
+  bool success = 1;
+  string message = 2;
+}

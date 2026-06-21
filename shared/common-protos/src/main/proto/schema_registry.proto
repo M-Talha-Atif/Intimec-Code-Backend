@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+package com.aidentx.dal.protos.schema_registry;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto"; // For optional fields
+import "google/protobuf/struct.proto";
+
+option java_multiple_files = true;
+option java_package = "com.aidentx.dal.protos.schema_registry";
+option java_outer_classname = "SchemaRegistryProto";
+
+// ===================================================================
+//  The Service Definition
+// ===================================================================
+
+// Service to manage the lifecycle of Identity Schemas and their fields.
+service SchemaRegistryService {
+  // --- Schema CRUD ---
+  rpc CreateIdentitySchema(CreateIdentitySchemaRequest)
+      returns (IdentitySchema);
+  rpc GetAllSchemas(GetAllSchemasRequest) returns (GetAllSchemasResponse);
+  rpc GetSchemaById(GetSchemaByIdRequest) returns (IdentitySchema);
+  rpc UpdateSchema(UpdateSchemaRequest) returns (IdentitySchema);
+  rpc DeleteSchema(DeleteSchemaRequest) returns (google.protobuf.Empty);
+
+  // --- Schema State Management ---
+  rpc SetSchemaAsDefault(SetSchemaAsDefaultRequest) returns (IdentitySchema);
+  rpc ActivateSchema(ActivateSchemaRequest) returns (IdentitySchema);
+  rpc DeactivateSchema(DeactivateSchemaRequest) returns (IdentitySchema);
+
+  // --- Field CRUD ---
+  rpc AddFieldToSchema(AddFieldToSchemaRequest) returns (SchemaField);
+  rpc GetSchemaFields(GetSchemaFieldsRequest) returns (GetSchemaFieldsResponse);
+  rpc UpdateField(UpdateFieldRequest) returns (SchemaField);
+  rpc DeleteField(DeleteFieldRequest) returns (google.protobuf.Empty);
+}
+
+// ===================================================================
+//  Enum Definitions
+// ===================================================================
+
+enum IdentityType {
+  UNSPECIFIED_IDENTITY_TYPE = 0;
+  EMPLOYEE = 1;
+  NON_EMPLOYEE = 2;
+  CUSTOMER = 3;
+  SYSTEM = 4;
+}
+
+enum DataType {
+  UNSPECIFIED_DATA_TYPE = 0;
+  STRING = 1;
+  INTEGER = 2;
+  BOOLEAN = 3;
+  DATETIME = 4;
+  JSON = 5;
+}
+
+enum RiskLevel {
+  UNSPECIFIED_RISK_LEVEL = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+}
+
+// ===================================================================
+//  Core Message Definitions
+// ===================================================================
+
+message IdentitySchema {
+  string id = 1;
+  string schema_name = 2;
+  string schema_code = 3;
+  string tenant_id = 4;
+  string description = 5;
+  IdentityType identity_type = 6;
+  bool is_active = 7;
+  bool is_default = 8;
+  // Use a wrapper for nullable fields
+  google.protobuf.StringValue parent_schema_id = 9;
+  repeated SchemaField fields = 10;
+  // Timestamps, etc. could be added here
+}
+
+message SchemaField {
+  string id = 1;
+  string schema_id = 2;
+  string display_name = 3;
+  string system_key = 4;
+  DataType data_type = 5;
+  string description = 6;
+  bool is_core_field = 7;
+  bool is_required = 8;
+  bool is_sensitive = 9;
+  bool is_writable = 10;
+  bool is_multivalued = 11;
+  bool sync_from_source = 12;
+  bool is_unique = 13;
+  RiskLevel risk_level = 14;
+  google.protobuf.Value default_value = 15; // Can be any type
+  string usage_context = 16;
+  string source_system = 17;
+  int32 display_order = 18;
+  repeated string compliance_tags = 19;
+  int64 created_at = 20;
+  int64 updated_at = 21;
+  // Internationalization labels
+  map<string, string> labels = 22;
+  int64 usage_count = 23;
+}
+
+// ===================================================================
+//  RPC Request/Response Messages
+// ===================================================================
+
+// --- Schema Messages ---
+
+message CreateIdentitySchemaRequest {
+  string schema_name = 1;
+  string schema_code = 2;
+  string tenant_id = 3;
+  string description = 4;
+  IdentityType identity_type = 5;
+  bool is_active = 6;
+  bool is_default = 7;
+  google.protobuf.StringValue parent_schema_id = 8;
+}
+
+message GetAllSchemasRequest { string tenant_id = 1; }
+
+message GetAllSchemasResponse { repeated IdentitySchema schemas = 1; }
+
+message GetSchemaByIdRequest { string schema_id = 1; }
+
+message UpdateSchemaRequest {
+  string schema_id = 1;
+  // Use wrappers to indicate which fields are being updated
+  google.protobuf.StringValue description = 2;
+  google.protobuf.StringValue schema_name = 3;
+  // ... add other updatable fields as needed
+}
+
+message DeleteSchemaRequest { string schema_id = 1; }
+
+message SetSchemaAsDefaultRequest { string schema_id = 1; }
+
+message ActivateSchemaRequest { string schema_id = 1; }
+
+message DeactivateSchemaRequest { string schema_id = 1; }
+
+// --- Field Messages ---
+
+message AddFieldToSchemaRequest {
+  string schema_id = 1;
+  string tenant_id = 2;
+  string display_name = 3;
+  string system_key = 4;
+  DataType data_type = 5;
+  string description = 6;
+  bool is_required = 7;
+  bool is_sensitive = 8;
+  bool is_writable = 9;
+  bool is_multivalued = 10;
+  bool sync_from_source = 11;
+  RiskLevel risk_level = 12;
+  google.protobuf.Value default_value = 13;
+  string usage_context = 14;
+  string source_system = 15;
+  repeated string compliance_tags = 16;
+  map<string, string> labels = 17;
+}
+
+message GetSchemaFieldsRequest {
+  string schema_id = 1;
+  string tenant_id = 2;
+}
+
+message GetSchemaFieldsResponse { repeated SchemaField fields = 1; }
+
+message UpdateFieldRequest {
+  string schema_id = 1;
+  string field_id = 2;
+  string tenant_id = 3;
+  // Use wrappers for updatable fields
+  google.protobuf.BoolValue is_sensitive = 4;
+  // ... add other updatable fields
+}
+
+message DeleteFieldRequest {
+  string schema_id = 1;
+  string field_id = 2;
+  string tenant_id = 3;
+}
